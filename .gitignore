@@ -6,6 +6,7 @@
 *.so
 *.dylib
 *.dll
+*.exe
 
 *.pdb
 *.dSYM/
