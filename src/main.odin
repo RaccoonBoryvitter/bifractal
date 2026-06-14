@@ -7,117 +7,62 @@ import "core:os"
 import "core:c"
 
 import sdl "vendor:sdl3"
-import "vendor:wgpu"
-import "vendor:wgpu/sdl3glue"
 
 AppState :: struct {
     ctx: runtime.Context,
 
     window: ^sdl.Window,
-    instance: wgpu.Instance,
-    surface: wgpu.Surface,
-    adapter: wgpu.Adapter,
-    device: wgpu.Device,
-    surface_configuration: wgpu.SurfaceConfiguration,
-    queue: wgpu.Queue,
-    shader_module: wgpu.ShaderModule,
-    pipeline_layout: wgpu.PipelineLayout,
-    render_pipeline: wgpu.RenderPipeline
+    device: ^sdl.GPUDevice,
+    vertex_buffer: ^sdl.GPUBuffer,
+    transfer_buffer: ^sdl.GPUTransferBuffer,
+    graphics_pipeline: ^sdl.GPUGraphicsPipeline,
+    
+    uniform: UniformBuffer,
 }
 
-wgpu_on_adapter :: proc "c" (
-    status: wgpu.RequestAdapterStatus,
-    adapter: wgpu.Adapter,
-    message: wgpu.StringView,
-    userdata1: rawptr,
-    userdata2: rawptr
-) {
-    state := (^AppState)(userdata1)
-    context = state.ctx
-
-    if status != .Success || adapter == nil {
-        log.errorf("unable to request WGPU adapter: [%v] %s", status, message)
-        return
-    }
-
-    state.adapter = adapter
-    wgpu.AdapterRequestDevice(adapter, nil, { callback = wgpu_on_device, userdata1 = userdata1 })
+Vertex :: struct {
+    position: [3]f32,
+    color: [4]f32
 }
 
-wgpu_on_device :: proc "c" (
-    status: wgpu.RequestDeviceStatus,
-    device: wgpu.Device,
-    message: wgpu.StringView,
-    userdata1: rawptr,
-    userdata2: rawptr
-) {
-    state := (^AppState)(userdata1)
-    context = state.ctx
+UniformBuffer :: struct {
+    time: f32
+}
 
-    if status != .Success || device == nil {
-        log.errorf("unable to request WGPU device: [%v] %s", status, message)
-        return
+vertices :: []Vertex{
+    { position = {  0.0,  0.5, 0.0 }, color = { 1.0, 0.0, 0.0, 1.0 } }, // top vertex
+    { position = { -0.5, -0.5, 0.0 }, color = { 1.0, 1.0, 0.0, 1.0 } }, // bottom left vertex
+    { position = {  0.5, -0.5, 0.0 }, color = { 1.0, 0.0, 1.0, 1.0 } }, // bottom right vertex
+}
+
+verticesSize := size_of(Vertex) * len(vertices)
+
+create_gpu_shader :: proc(
+    filepath: cstring, 
+    shader_type: sdl.GPUShaderStage,
+    device: ^sdl.GPUDevice,
+    use_uniform: bool
+) -> ^sdl.GPUShader
+{
+    shaderCodeSize : uint
+    shaderCode := sdl.LoadFile(filepath, &shaderCodeSize)
+
+    shaderInfo := sdl.GPUShaderCreateInfo{
+        code = (^u8)(shaderCode),
+        code_size = shaderCodeSize,
+        entrypoint = "main",
+        format = {.SPIRV},
+        stage = shader_type,
+        num_samplers = 0,
+        num_storage_buffers = 0,
+        num_storage_textures = 0,
+        num_uniform_buffers = use_uniform ? 1 : 0,
     }
 
-    state.device = device
-    width, height := get_framebuffer_size(state.window)
-    state.surface_configuration = wgpu.SurfaceConfiguration {
-        device      = state.device,
-		usage       = { .RenderAttachment },
-		format      = .BGRA8Unorm,
-		width       = width,
-		height      = height,
-		presentMode = .Fifo,
-		alphaMode   = .Opaque,
-    }
-    wgpu.SurfaceConfigure(state.surface, &state.surface_configuration)
+    shader := sdl.CreateGPUShader(device, shaderInfo)
+    sdl.free(shaderCode)
 
-    state.queue = wgpu.DeviceGetQueue(state.device)
-
-    shader :: `
-    @vertex
-	fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4<f32> {
-		let x = f32(i32(in_vertex_index) - 1);
-		let y = f32(i32(in_vertex_index & 1u) * 2 - 1);
-		return vec4<f32>(x, y, 0.0, 1.0);
-	}
-
-	@fragment
-	fn fs_main() -> @location(0) vec4<f32> {
-		return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-	}`
-
-    state.shader_module = wgpu.DeviceCreateShaderModule(state.device, &{
-        nextInChain = &wgpu.ShaderSourceWGSL {
-            sType = .ShaderSourceWGSL,
-            code = shader,
-        }
-    })
-
-    state.pipeline_layout = wgpu.DeviceCreatePipelineLayout(state.device, &{ })
-    state.render_pipeline = wgpu.DeviceCreateRenderPipeline(state.device, &{
-        layout = state.pipeline_layout,
-        vertex = {
-            module = state.shader_module,
-            entryPoint = "vs_main",
-        },
-        fragment = &{
-            module = state.shader_module,
-            entryPoint = "fs_main",
-            targetCount = 1,
-            targets = &wgpu.ColorTargetState {
-                format = .BGRA8Unorm,
-                writeMask = wgpu.ColorWriteMaskFlags_All
-            },
-        },
-        primitive = {
-            topology = .TriangleList
-        },
-        multisample = {
-            count = 1,
-            mask = 0xFFFFFFFF
-        }
-    })
+    return shader
 }
 
 @(export)
@@ -131,6 +76,7 @@ SDL_AppInit :: proc "c" (
 
     state := new(AppState)
     state.ctx = context
+    state.uniform = {}
 
     appstate^ = rawptr(state)
 
@@ -145,23 +91,147 @@ SDL_AppInit :: proc "c" (
         log.errorf("unable to create SDL window: %s", sdl.GetError())
         return .FAILURE
     }
-
     state.window = window
-    wgpu_instance := wgpu.CreateInstance()
-    if wgpu_instance == nil {
-        log.error("unable to create WGPU instance")
+    
+    gpu_device := sdl.CreateGPUDevice({.SPIRV}, false, nil)
+    if gpu_device == nil {
+        log.errorf("unable to create SDL GPU device: %s", sdl.GetError())
         return .FAILURE
     }
-    state.instance = wgpu_instance
+    state.device = gpu_device
 
-    surface := sdl3glue.GetSurface(wgpu_instance, window)
-    if surface == nil {
-        log.error("unable to create WGPU surface")
+    ok = sdl.ClaimWindowForGPUDevice(state.device, state.window)
+    if !ok {
+        log.errorf("unable to claim window for GPU device: %s", sdl.GetError())
         return .FAILURE
     }
-    state.surface = surface
 
-    wgpu.InstanceRequestAdapter(wgpu_instance, &{ compatibleSurface = surface }, { callback = wgpu_on_adapter, userdata1 = state })
+    vertexShader := create_gpu_shader(
+        "../assets/shaders/compiled/vertex.spv",
+        .VERTEX,
+        state.device,
+        false
+    )
+    fragmentShader := create_gpu_shader(
+        "../assets/shaders/compiled/fragment.spv",
+        .FRAGMENT,
+        state.device,
+        true
+    )
+
+    vertexBufferDescriptions := [1]sdl.GPUVertexBufferDescription{
+        {
+            slot = 0,
+            input_rate = .VERTEX,
+            instance_step_rate = 0,
+            pitch = size_of(Vertex),
+        }
+    }
+
+    vertexAttributes := [2]sdl.GPUVertexAttribute{
+        {
+            buffer_slot = 0,
+            location = 0,
+            format = .FLOAT3,
+            offset = 0,
+        },
+        {
+            buffer_slot = 0,
+            location = 1,
+            format = .FLOAT4,
+            offset = size_of(f32) * 3,
+        }
+    }
+
+    colorTargetDescriptions := [1]sdl.GPUColorTargetDescription{
+        {
+            format = sdl.GetGPUSwapchainTextureFormat(state.device, state.window),
+            blend_state = {
+                enable_blend = true,
+                color_blend_op = .ADD,
+                alpha_blend_op = .ADD,
+                src_color_blendfactor = .SRC_ALPHA,
+                dst_color_blendfactor = .ONE_MINUS_SRC_ALPHA,
+                src_alpha_blendfactor = .SRC_ALPHA,
+                dst_alpha_blendfactor = .ONE_MINUS_SRC_ALPHA,
+            }
+        }
+    }
+
+    pipelineInfo := sdl.GPUGraphicsPipelineCreateInfo{
+        vertex_shader = vertexShader,
+        fragment_shader = fragmentShader,
+        primitive_type = .TRIANGLELIST,
+        vertex_input_state = {
+            num_vertex_buffers = 1,
+            vertex_buffer_descriptions = raw_data(vertexBufferDescriptions[:]),
+            num_vertex_attributes = 2,
+            vertex_attributes = raw_data(vertexAttributes[:])
+        },
+        target_info = {
+            num_color_targets = 1,
+            color_target_descriptions = raw_data(colorTargetDescriptions[:])
+        }
+    }
+
+    graphics_pipeline := sdl.CreateGPUGraphicsPipeline(state.device, pipelineInfo)
+    if graphics_pipeline == nil {
+        log.errorf("unable to create GPU graphics pipeline: %s", sdl.GetError())
+        return .FAILURE
+    }
+    state.graphics_pipeline = graphics_pipeline
+
+    sdl.ReleaseGPUShader(state.device, vertexShader)
+    sdl.ReleaseGPUShader(state.device, fragmentShader)
+
+    bufferInfo := sdl.GPUBufferCreateInfo{
+        size = u32(verticesSize),
+        usage = {.VERTEX}
+    }
+    vertexBuffer := sdl.CreateGPUBuffer(state.device, bufferInfo)
+    if vertexBuffer == nil {
+        log.errorf("unable to create GPU vertex buffer: %s", sdl.GetError())
+        return .FAILURE
+    }
+    state.vertex_buffer = vertexBuffer
+
+    transferBufferCreateInfo := sdl.GPUTransferBufferCreateInfo{
+        size = u32(verticesSize),
+        usage = .UPLOAD
+    }
+    transferBuffer := sdl.CreateGPUTransferBuffer(state.device, transferBufferCreateInfo)
+    if transferBuffer == nil {
+        log.errorf("unable to create GPU transfer buffer: %s", sdl.GetError())
+        return .FAILURE
+    }
+    state.transfer_buffer = transferBuffer
+
+    vertexData := sdl.MapGPUTransferBuffer(state.device, state.transfer_buffer, false)
+    sdl.memcpy(vertexData, raw_data(vertices), uint(verticesSize))
+    sdl.UnmapGPUTransferBuffer(state.device, state.transfer_buffer)
+    
+    command_buffer := sdl.AcquireGPUCommandBuffer(state.device)
+    copy_pass := sdl.BeginGPUCopyPass(command_buffer)
+
+    transferBufferLocation := sdl.GPUTransferBufferLocation{
+        transfer_buffer = state.transfer_buffer,
+        offset = 0,
+    }
+
+    bufferRegion := sdl.GPUBufferRegion{
+        buffer = state.vertex_buffer,
+        size = u32(verticesSize),
+        offset = 0,
+    }
+
+    sdl.UploadToGPUBuffer(copy_pass, transferBufferLocation, bufferRegion, true)
+
+    sdl.EndGPUCopyPass(copy_pass)
+    ok = sdl.SubmitGPUCommandBuffer(command_buffer)
+    if !ok {
+        log.errorf("unable to submit GPU command buffer: %s", sdl.GetError())
+        return .FAILURE
+    }
 
     return .CONTINUE
 }
@@ -175,10 +245,9 @@ SDL_AppEvent :: proc "c" (
     context = state.ctx
 
     #partial switch event.type {
-    case .QUIT:
+    case .QUIT, .WINDOW_CLOSE_REQUESTED:
         return .SUCCESS
     case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
-        resize(state)
         return .CONTINUE
     case:
         return .CONTINUE
@@ -192,58 +261,62 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     state := (^AppState)(appstate)
     context = state.ctx
 
-    surface_texture := wgpu.SurfaceGetCurrentTexture(state.surface)
-    switch surface_texture.status {
-	case .SuccessOptimal, .SuccessSuboptimal:
-		// All good, could handle suboptimal here.
-	case .Timeout, .Outdated, .Lost:
-		// Skip this frame, and re-configure surface.
-		if surface_texture.texture != nil {
-			wgpu.TextureRelease(surface_texture.texture)
-		}
-		resize(state)
-		return .CONTINUE
-	case .Occluded:
-		// Window is occluded (e.g. minimized), skip this frame.
-		return .CONTINUE
-	case .Error:
-		// Fatal error
-        log.errorf("[triangle] get_current_texture status=%v", surface_texture.status)
-        return .FAILURE
-	}
-    defer wgpu.TextureRelease(surface_texture.texture)
+    command_buffer := sdl.AcquireGPUCommandBuffer(state.device)
 
-    frame := wgpu.TextureCreateView(surface_texture.texture, nil)
-    defer wgpu.TextureViewRelease(frame)
+    swapchainTexture : ^sdl.GPUTexture
+    width, height : u32
 
-    command_encoder := wgpu.DeviceCreateCommandEncoder(state.device, nil)
-    defer wgpu.CommandEncoderRelease(command_encoder)
-
-    render_pass_encoder := wgpu.CommandEncoderBeginRenderPass(
-        command_encoder,
-        &{
-            colorAttachmentCount = 1,
-            colorAttachments = &wgpu.RenderPassColorAttachment{
-                view = frame,
-                loadOp = .Clear,
-                storeOp = .Store,
-                depthSlice = wgpu.DEPTH_SLICE_UNDEFINED,
-                clearValue = { 0, 1, 0, 1 },
-            },
-        },
+    ok := sdl.WaitAndAcquireGPUSwapchainTexture(
+        command_buffer,
+        state.window,
+        &swapchainTexture,
+        &width,
+        &height
     )
+    if !ok {
+        log.errorf("unable to acquire GPU swapchain texture: %s", sdl.GetError())
+        return .FAILURE
+    }
+    if swapchainTexture == nil {
+        ok = sdl.SubmitGPUCommandBuffer(command_buffer)
+        if !ok {
+            log.errorf("unable to submit GPU command buffer: %s", sdl.GetError())
+            return .FAILURE
+        }
+        return .CONTINUE
+    }
 
-    wgpu.RenderPassEncoderSetPipeline(render_pass_encoder, state.render_pipeline)
-    wgpu.RenderPassEncoderDraw(render_pass_encoder, vertexCount=3, instanceCount=1, firstVertex=0, firstInstance=0)
+    colorTargetInfo := sdl.GPUColorTargetInfo{
+        texture = swapchainTexture,
+        clear_color = { 240.0 / 255.0, 240.0 / 255.0, 240.0 / 255.0, 255.0 / 255.0 },
+        load_op = .CLEAR,
+        store_op = .STORE,
+    }
 
-    wgpu.RenderPassEncoderEnd(render_pass_encoder)
-    wgpu.RenderPassEncoderRelease(render_pass_encoder)
+    render_pass := sdl.BeginGPURenderPass(command_buffer, &colorTargetInfo, 1, nil)
 
-    command_buffer := wgpu.CommandEncoderFinish(command_encoder, nil)
-    defer wgpu.CommandBufferRelease(command_buffer)
+    sdl.BindGPUGraphicsPipeline(render_pass, state.graphics_pipeline)
 
-    wgpu.QueueSubmit(state.queue, { command_buffer })
-    wgpu.SurfacePresent(state.surface)
+    bufferBindings := [1]sdl.GPUBufferBinding{
+        {
+            buffer = state.vertex_buffer,
+            offset = 0
+        }
+    }
+    sdl.BindGPUVertexBuffers(render_pass, 0, raw_data(bufferBindings[:]), 1)
+
+    state.uniform.time = f32(sdl.GetTicksNS()) / 1e9
+    sdl.PushGPUFragmentUniformData(command_buffer, 0, &state.uniform, size_of(UniformBuffer))
+
+    sdl.DrawGPUPrimitives(render_pass, 3, 1, 0, 0)
+
+    sdl.EndGPURenderPass(render_pass)
+
+    ok = sdl.SubmitGPUCommandBuffer(command_buffer)
+    if !ok {
+        log.errorf("unable to submit GPU command buffer: %s", sdl.GetError())
+        return .FAILURE
+    }
 
     return .CONTINUE
 }
@@ -255,17 +328,14 @@ SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     // I don't know, but let's ignore it for now
     state := (^AppState)(appstate)
 
-    wgpu.RenderPipelineRelease(state.render_pipeline)
-    wgpu.PipelineLayoutRelease(state.pipeline_layout)
-    wgpu.ShaderModuleRelease(state.shader_module)
-    wgpu.QueueRelease(state.queue)
-    wgpu.DeviceRelease(state.device)
-    wgpu.AdapterRelease(state.adapter)
-    wgpu.SurfaceRelease(state.surface)
-    wgpu.InstanceRelease(state.instance)
-
     // Some comments say that `SDL_AppQuit` will call these functions for us
     // but I don't trust them, and I'm overprotective
+    sdl.ReleaseGPUBuffer(state.device, state.vertex_buffer)
+    sdl.ReleaseGPUTransferBuffer(state.device, state.transfer_buffer)
+    sdl.ReleaseGPUGraphicsPipeline(state.device, state.graphics_pipeline)
+
+    sdl.DestroyGPUDevice(state.device)
+
     sdl.DestroyWindow(state.window)
     sdl.Quit()
 
@@ -276,21 +346,6 @@ SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     state = nil
 }
 
-get_framebuffer_size :: proc(window: ^sdl.Window) -> (width, height: u32) {
-    w, h: i32
-    sdl.GetWindowSizeInPixels(window, &w, &h)
-    return u32(w), u32(h)
-}
-
-resize :: proc "c" (state: ^AppState) {
-    context = state.ctx
-
-    width, height := get_framebuffer_size(state.window)
-    state.surface_configuration.width = width
-    state.surface_configuration.height = height
-
-    wgpu.SurfaceConfigure(state.surface, &state.surface_configuration)
-}
 
 main :: proc() {
     argc := cast(c.int)len(os.args)
