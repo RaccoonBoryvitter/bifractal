@@ -366,8 +366,6 @@ SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     // I don't know, but let's ignore it for now
     state := (^AppState)(appstate)
 
-    // Some comments say that `SDL_AppQuit` will call these functions for us
-    // but I don't trust them, and I'm overprotective
     sdl.ReleaseGPUTexture(state.device, state.texture)
     sdl.ReleaseGPUComputePipeline(state.device, state.compute_pipeline)
 
@@ -400,12 +398,15 @@ main :: proc() {
         delete (arg)
     }
 
-    sdl.EnterAppMainCallbacks(
-        argc,
-        raw_data(argv),
-        SDL_AppInit,
-        SDL_AppIterate,
-        SDL_AppEvent,
-        SDL_AppQuit
-    )
+    main_callback := proc(argc: c.int, argv: [^]cstring) {
+        sdl.EnterAppMainCallbacks(
+            argc,
+            argv,
+            SDL_AppInit,
+            SDL_AppIterate,
+            SDL_AppEvent,
+            SDL_AppQuit
+        )
+    }
+    sdl.RunApp(argc, raw_data(argv), main_callback, nil)
 }
