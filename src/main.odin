@@ -24,6 +24,8 @@ AppState :: struct {
 
     zoom_level: f32,
     is_dragging: bool,
+    default_cursor: ^sdl.Cursor,
+    move_cursor: ^sdl.Cursor,
 }
 
 UniformBuffer :: struct {
@@ -155,6 +157,9 @@ SDL_AppInit :: proc "c" (
     }
     state.zoom_level = math.log2(state.uniform.zoom)
 
+    state.default_cursor = sdl.CreateSystemCursor(.DEFAULT)
+    state.move_cursor = sdl.CreateSystemCursor(.MOVE)
+
     return .CONTINUE
 }
 
@@ -231,11 +236,21 @@ SDL_AppEvent :: proc "c" (
     case .MOUSE_BUTTON_UP:
         if event.button.button == sdl.BUTTON_LEFT {
 			state.is_dragging = false
+            ok := sdl.SetCursor(state.default_cursor)
+            if !ok {
+                log.errorf("unable to set default cursor: %s", sdl.GetError())
+                return .FAILURE
+            }
 		}
         return .CONTINUE
     case .MOUSE_BUTTON_DOWN:
         if event.button.button == sdl.BUTTON_LEFT {
 			state.is_dragging = true
+            ok := sdl.SetCursor(state.move_cursor)
+            if !ok {
+                log.errorf("unable to set move cursor: %s", sdl.GetError())
+                return .FAILURE
+            }
 		}
         return .CONTINUE
     case .MOUSE_MOTION:
@@ -365,6 +380,9 @@ SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     // Like, if it's a failure, then we just output the error?
     // I don't know, but let's ignore it for now
     state := (^AppState)(appstate)
+
+    sdl.DestroyCursor(state.move_cursor)
+    sdl.DestroyCursor(state.default_cursor)
 
     sdl.ReleaseGPUTexture(state.device, state.texture)
     sdl.ReleaseGPUComputePipeline(state.device, state.compute_pipeline)
