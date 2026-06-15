@@ -38,9 +38,9 @@ void main() {
 
     vec3 color = vec3(0.0);
     if (iter < max_iter) {
-        // float smooth_iter = float(iter) - log2(log2(dot(z, z))) + 4.0;
-        // float t = smooth_iter / float(max_iter);
-        float t = float(iter) / float(max_iter);
+        float smooth_iter = float(iter) - log2(log2(dot(z, z))) + 4.0;
+        float t = smooth_iter / float(max_iter);
+        // float t = float(iter) / float(max_iter);
         color = cosine_palette(t);
     }
 

@@ -5,6 +5,7 @@ import "core:strings"
 import "core:log"
 import "core:os"
 import "core:c"
+import "core:math"
 
 import sdl "vendor:sdl3"
 
@@ -20,6 +21,9 @@ AppState :: struct {
     uniform: UniformBuffer,
     window_width: u32,
     window_height: u32,
+
+    zoom_level: f32,
+    is_dragging: bool,
 }
 
 UniformBuffer :: struct {
@@ -149,6 +153,7 @@ SDL_AppInit :: proc "c" (
         palette_c  = { 1.0, 1.0, 1.0 },
         palette_d  = { 0.0, 0.10, 0.20 },
     }
+    state.zoom_level = math.log2(state.uniform.zoom)
 
     return .CONTINUE
 }
@@ -164,6 +169,88 @@ SDL_AppEvent :: proc "c" (
     #partial switch event.type {
     case .QUIT, .WINDOW_CLOSE_REQUESTED:
         return .SUCCESS
+    case .KEY_DOWN:
+        keycode := event.key.key
+        pan_factor : f32 = 0.05
+        if keycode == sdl.K_W {
+            state.uniform.center.y -= pan_factor / state.uniform.zoom
+        }
+        if keycode == sdl.K_S {
+            state.uniform.center.y += pan_factor / state.uniform.zoom
+        }
+        if keycode == sdl.K_A {
+            state.uniform.center.x -= pan_factor / state.uniform.zoom
+        }
+        if keycode == sdl.K_D {
+            state.uniform.center.x += pan_factor / state.uniform.zoom
+        }
+
+        if keycode == sdl.K_Q {
+            state.uniform.max_iter -= 10
+            if state.uniform.max_iter < 8 {
+                state.uniform.max_iter = 8
+            }
+        }
+        if keycode == sdl.K_E {
+            state.uniform.max_iter += 8
+            if state.uniform.max_iter > 1024 {
+                state.uniform.max_iter = 1024
+            }
+        }
+
+        if keycode == sdl.K_R {
+            state.uniform.zoom = 0.5
+            state.zoom_level = math.log2(state.uniform.zoom)
+
+            state.uniform.center = { -0.5, 0.0 }
+            state.uniform.max_iter = 256
+        }
+        return .CONTINUE
+    case .MOUSE_WHEEL:
+        mouse_x, mouse_y : f32
+        mouse_flags := sdl.GetMouseState(&mouse_x, &mouse_y)
+
+        w := f32(state.window_width)
+        h := f32(state.window_height)
+        mouse_complex := [2]f32{
+            (mouse_x - w * 0.5) / (h * state.uniform.zoom) + state.uniform.center.x,
+            (mouse_y - h * 0.5) / (h * state.uniform.zoom) + state.uniform.center.y,
+        }
+
+        state.zoom_level += event.wheel.y * 0.1
+        state.uniform.zoom = math.exp(state.zoom_level)
+
+        new_mouse_complex := [2]f32{
+            (mouse_x - w * 0.5) / (h * state.uniform.zoom) + state.uniform.center.x,
+            (mouse_y - h * 0.5) / (h * state.uniform.zoom) + state.uniform.center.y,
+        }
+
+        state.uniform.center.x += mouse_complex.x - new_mouse_complex.x
+        state.uniform.center.y += mouse_complex.y - new_mouse_complex.y
+        return .CONTINUE
+    case .MOUSE_BUTTON_UP:
+        if event.button.button == sdl.BUTTON_LEFT {
+			state.is_dragging = false
+		}
+        return .CONTINUE
+    case .MOUSE_BUTTON_DOWN:
+        if event.button.button == sdl.BUTTON_LEFT {
+			state.is_dragging = true
+		}
+        return .CONTINUE
+    case .MOUSE_MOTION:
+        if !state.is_dragging {
+            return .CONTINUE
+        }
+
+        dx := f32(event.motion.xrel)
+        dy := f32(event.motion.yrel)
+        scale := 2.0 / (f32(state.window_height) * state.uniform.zoom)
+
+        state.uniform.center.x -= dx * scale 
+        state.uniform.center.y -= dy * scale
+
+        return .CONTINUE
     case .WINDOW_PIXEL_SIZE_CHANGED:
         e := event.window
         state.window_width = u32(e.data1)
