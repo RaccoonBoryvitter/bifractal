@@ -760,37 +760,48 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 
     mu.begin(&state.ui_context)
     if mu.begin_window(&state.ui_context, "Controls", mu.Rect{10, 10, 360, 200}, opts) {
-        if .ACTIVE in mu.header(&state.ui_context, "Zoom and Pan") {
+        container := mu.get_current_container(&state.ui_context)
+        padding := state.ui_context.style.padding
+        spacing := state.ui_context.style.spacing
+        available := container.body.w - padding * 2
+
+        if .ACTIVE in mu.header(&state.ui_context, "Zoom and Pan", {.EXPANDED}) {
 			mu.layout_row(&state.ui_context, {60, -1}, 0)
 
             mu.label(&state.ui_context, "Zoom:")
             zoom_format := state.uniform.zoom > 1_000_000 || state.uniform.zoom < 0.000_001 ? "%e" : "%.4f"
             mu.label(&state.ui_context, fmt.tprintf(zoom_format, state.uniform.zoom))
 
-            mouse_x, mouse_y : f32
-            _ = sdl.GetMouseState(&mouse_x, &mouse_y)
+            if state.ui_context.hover_root == nil {
+                mouse_x, mouse_y : f32
+                _ = sdl.GetMouseState(&mouse_x, &mouse_y)
 
-            complex_coords := screen_to_complex(
-                mouse_x,
-                mouse_y,
-                state.window_width,
-                state.window_height,
-                state.uniform.center,
-                state.uniform.zoom
-            )
+                complex_coords := screen_to_complex(
+                    mouse_x,
+                    mouse_y,
+                    state.window_width,
+                    state.window_height,
+                    state.uniform.center,
+                    state.uniform.zoom
+                )
 
-            mu.label(&state.ui_context, "Re:")
-            mu.label(&state.ui_context, fmt.tprintf("%.6f", real(complex_coords)))
+                mu.label(&state.ui_context, "Re:")
+                mu.label(&state.ui_context, fmt.tprintf("%.6f", real(complex_coords)))
 
-            mu.label(&state.ui_context, "Im:")
-            mu.label(&state.ui_context, fmt.tprintf("%.6f", imag(complex_coords)))
+                mu.label(&state.ui_context, "Im:")
+                mu.label(&state.ui_context, fmt.tprintf("%.6f", imag(complex_coords)))
+            } else {
+                mu.label(&state.ui_context, "Re:")
+                mu.label(&state.ui_context, "--")
+                mu.label(&state.ui_context, "Im:")
+                mu.label(&state.ui_context, "--")
+            }
+            
 
-            container := mu.get_current_container(&state.ui_context)
-            available := container.body.w - state.ui_context.style.padding * 2
             mu.layout_row(&state.ui_context, {available / 3, -1}, 0)
             mu.label(&state.ui_context, "Iterations:")
             max_iter_float := f32(state.uniform.max_iter)
-            mu.slider(&state.ui_context, &max_iter_float, 8, 1024)
+            mu.slider(&state.ui_context, &max_iter_float, 8, 1024, 1)
             state.uniform.max_iter = i32(max_iter_float)
 
             mu.layout_row(&state.ui_context, {-1}, 0)
@@ -804,10 +815,6 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         }
 
         if .ACTIVE in mu.header(&state.ui_context, "Palette") {
-            container := mu.get_current_container(&state.ui_context)
-            padding := state.ui_context.style.padding
-            available := container.body.w - padding * 2
-
             mu.layout_row(&state.ui_context, {-1}, 12)
             swatch_rect := mu.layout_next(&state.ui_context)
 
@@ -844,11 +851,6 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         }
 
         if .ACTIVE in mu.header(&state.ui_context, "Presets") {
-            container := mu.get_current_container(&state.ui_context)
-            padding := state.ui_context.style.padding
-            spacing := state.ui_context.style.spacing
-            available := container.body.w - padding * 2
-
             SWATCH_W  :: 64
             button_w  := available - SWATCH_W - spacing
 
@@ -860,21 +862,21 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
                 }
 
                 swatch_container_rect := mu.layout_next(&state.ui_context)
-                STEPS :: 8
-                step_w := swatch_container_rect.w / STEPS
+                STEPS :: 16
+                step_w := f32(swatch_container_rect.w) / STEPS
                 for i in 0..<STEPS {
                     t := f32(i) / f32(STEPS - 1)
                     color := cosine_palette_cpu(t, preset.a, preset.b, preset.c, preset.d)
                     slice_rect := mu.Rect{
-                        x = swatch_container_rect.x + i32(i) * step_w,
+                        x = swatch_container_rect.x + i32(f32(i) * step_w),
                         y = swatch_container_rect.y,
-                        w = step_w,
+                        w = i32(math.ceil(step_w)) + 1,
                         h = swatch_container_rect.h,
                     }
                     mu.draw_rect(&state.ui_context, slice_rect, mu.Color{
-                        r = u8(color.r * 255),
-                        g = u8(color.g * 255),
-                        b = u8(color.b * 255),
+                        r = u8(math.clamp(color.r, 0, 1) * 255),
+                        g = u8(math.clamp(color.g, 0, 1) * 255),
+                        b = u8(math.clamp(color.b, 0, 1) * 255),
                         a = 255,
                     })
                 }
