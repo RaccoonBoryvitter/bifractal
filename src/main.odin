@@ -721,6 +721,14 @@ screen_to_complex :: proc(
     )
 }
 
+cosine_palette_cpu :: proc(t: f32, a, b, c, d: [3]f32) -> [3]f32 {
+    return {
+        a.r + b.r * math.cos(2 * math.PI * (c.r * t + d.r)),
+        a.g + b.g * math.cos(2 * math.PI * (c.g * t + d.g)),
+        a.b + b.b * math.cos(2 * math.PI * (c.b * t + d.b)),
+    }
+}
+
 palette_row :: proc(ui: ^mu.Context, label: string, color: ^[3]f32) {
     mu.layout_row(ui, {-1}, 0)
     mu.label(ui, label)
@@ -746,7 +754,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     @static opts := mu.Options{.NO_CLOSE}
 
     mu.begin(&state.ui_context)
-    if mu.begin_window(&state.ui_context, "Controls", mu.Rect{10, 10, 320, 200}, opts) {
+    if mu.begin_window(&state.ui_context, "Controls", mu.Rect{10, 10, 360, 200}, opts) {
         if .ACTIVE in mu.header(&state.ui_context, "Zoom and Pan") {
 			mu.layout_row(&state.ui_context, {60, -1}, 0)
 
@@ -791,6 +799,39 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         }
 
         if .ACTIVE in mu.header(&state.ui_context, "Palette") {
+            container := mu.get_current_container(&state.ui_context)
+            padding := state.ui_context.style.padding
+            available := container.body.w - padding * 2
+
+            mu.layout_row(&state.ui_context, {-1}, 12)
+            swatch_rect := mu.layout_next(&state.ui_context)
+
+            STEPS :: 64
+            step_w := f32(swatch_rect.w) / f32(STEPS)
+
+            for i in 0..<STEPS {
+                t := f32(i) / f32(STEPS - 1)
+                color := cosine_palette_cpu(
+                    t,
+                    state.uniform.palette_a,
+                    state.uniform.palette_b,
+                    state.uniform.palette_c,
+                    state.uniform.palette_d,
+                )
+                slice := mu.Rect{
+                    x = swatch_rect.x + i32(f32(i) * step_w),
+                    y = swatch_rect.y,
+                    w = i32(math.ceil(step_w)) + 1,  // +1 to avoid gaps between slices
+                    h = swatch_rect.h,
+                }
+                mu.draw_rect(&state.ui_context, slice, mu.Color{
+                    r = u8(math.clamp(color.r, 0, 1) * 255),
+                    g = u8(math.clamp(color.g, 0, 1) * 255),
+                    b = u8(math.clamp(color.b, 0, 1) * 255),
+                    a = 255,
+                })
+            }
+
 			palette_row(&state.ui_context, "a:", &state.uniform.palette_a)
             palette_row(&state.ui_context, "b:", &state.uniform.palette_b)
             palette_row(&state.ui_context, "c:", &state.uniform.palette_c)
@@ -801,24 +842,36 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
             container := mu.get_current_container(&state.ui_context)
             padding := state.ui_context.style.padding
             spacing := state.ui_context.style.spacing
-            available := container.body.w - padding * 2 - spacing * 2
-            col_w := available / 2
+            available := container.body.w - padding * 2
 
-            presets_len := len(palette_presets)
-            for i := 0; i < presets_len; i += 2 {
-                if i + 1 < presets_len {
-                    mu.layout_row(&state.ui_context, {col_w, col_w}, 0)
-                } else {
-                    mu.layout_row(&state.ui_context, {-1}, 0)
+            SWATCH_W  :: 64
+            button_w  := available - SWATCH_W - spacing
+
+            for preset in palette_presets {
+                mu.layout_row(&state.ui_context, {button_w, SWATCH_W}, 0)
+
+                if .SUBMIT in mu.button(&state.ui_context, preset.name) {
+                    apply_palette_preset(&state.uniform, preset)
                 }
 
-                if .SUBMIT in mu.button(&state.ui_context, palette_presets[i].name) {
-                    apply_palette_preset(&state.uniform, palette_presets[i])
-                }
-                if i + 1 < presets_len {
-                    if .SUBMIT in mu.button(&state.ui_context, palette_presets[i+1].name) {
-                        apply_palette_preset(&state.uniform, palette_presets[i+1])
+                swatch_container_rect := mu.layout_next(&state.ui_context)
+                STEPS :: 8
+                step_w := swatch_container_rect.w / STEPS
+                for i in 0..<STEPS {
+                    t := f32(i) / f32(STEPS - 1)
+                    color := cosine_palette_cpu(t, preset.a, preset.b, preset.c, preset.d)
+                    slice_rect := mu.Rect{
+                        x = swatch_container_rect.x + i32(i) * step_w,
+                        y = swatch_container_rect.y,
+                        w = step_w,
+                        h = swatch_container_rect.h,
                     }
+                    mu.draw_rect(&state.ui_context, slice_rect, mu.Color{
+                        r = u8(color.r * 255),
+                        g = u8(color.g * 255),
+                        b = u8(color.b * 255),
+                        a = 255,
+                    })
                 }
             }
         }
