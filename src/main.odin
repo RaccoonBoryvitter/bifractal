@@ -1,6 +1,7 @@
 #+feature dynamic-literals
 package main
 
+import "core:fmt"
 import "base:runtime"
 import "core:strings"
 import "core:log"
@@ -567,7 +568,7 @@ SDL_AppEvent :: proc "c" (
             break
         }
         mouse_x, mouse_y : f32
-        mouse_flags := sdl.GetMouseState(&mouse_x, &mouse_y)
+        _ = sdl.GetMouseState(&mouse_x, &mouse_y)
 
         w := f32(state.window_width)
         h := f32(state.window_height)
@@ -632,24 +633,96 @@ SDL_AppEvent :: proc "c" (
     return .CONTINUE
 }
 
+screen_to_complex :: proc(
+    screen_x, screen_y: f32,
+    window_width, window_height: u32,
+    center: [2]f32,
+    zoom: f32
+) -> complex64 {
+    w := f32(window_width)
+    h := f32(window_height)
+    return complex(
+        (screen_x - w * 0.5) / (h * zoom) + center.x,
+        (screen_y - h * 0.5) / (h * zoom) + center.y
+    )
+}
+
+palette_row :: proc(ui: ^mu.Context, label: string, color: ^[3]f32) {
+    mu.layout_row(ui, {-1}, 0)
+    mu.label(ui, label)
+
+    container := mu.get_current_container(ui)
+    padding := ui.style.padding
+    spacing := ui.style.spacing
+    available := container.body.w - padding * 2 - spacing * 2
+    col_w := available / 3
+
+    mu.layout_row(ui, {col_w, col_w, col_w}, 0)
+    mu.slider(ui, &color.r, 0, 1.0)
+    mu.slider(ui, &color.g, 0, 1.0)
+    mu.slider(ui, &color.b, 0, 1.0)
+}
+
 @(export)
 SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     state := (^AppState)(appstate)
     context = state.ctx
+    defer free_all(context.temp_allocator)
+
+    @static opts := mu.Options{.NO_CLOSE}
 
     mu.begin(&state.ui_context)
-    if mu.begin_window(&state.ui_context, "Controls", mu.Rect{10, 10, 220, 160}) {
-        mu.label(&state.ui_context, "Zoom and Pan")
-        if .SUBMIT in mu.button(&state.ui_context, "Reset View") {
-            state.uniform.zoom = 0.5
-            state.zoom_level = math.log2(state.uniform.zoom)
+    if mu.begin_window(&state.ui_context, "Controls", mu.Rect{10, 10, 320, 200}, opts) {
+        if .ACTIVE in mu.header(&state.ui_context, "Zoom and Pan") {
+			mu.layout_row(&state.ui_context, {60, -1}, 0)
 
-            state.uniform.center = { -0.5, 0.0 }
-            state.uniform.max_iter = 256
+            mu.label(&state.ui_context, "Zoom:")
+            zoom_format := state.uniform.zoom > 1_000_000 || state.uniform.zoom < 0.000_001 ? "%e" : "%.4f"
+            mu.label(&state.ui_context, fmt.tprintf(zoom_format, state.uniform.zoom))
+
+            mouse_x, mouse_y : f32
+            _ = sdl.GetMouseState(&mouse_x, &mouse_y)
+
+            complex_coords := screen_to_complex(
+                mouse_x,
+                mouse_y,
+                state.window_width,
+                state.window_height,
+                state.uniform.center,
+                state.uniform.zoom
+            )
+
+            mu.label(&state.ui_context, "Re:")
+            mu.label(&state.ui_context, fmt.tprintf("%.6f", real(complex_coords)))
+
+            mu.label(&state.ui_context, "Im:")
+            mu.label(&state.ui_context, fmt.tprintf("%.6f", imag(complex_coords)))
+
+            container := mu.get_current_container(&state.ui_context)
+            available := container.body.w - state.ui_context.style.padding * 2
+            mu.layout_row(&state.ui_context, {available / 3, -1}, 0)
+            mu.label(&state.ui_context, "Iterations:")
+            max_iter_float := f32(state.uniform.max_iter)
+            mu.slider(&state.ui_context, &max_iter_float, 8, 1024)
+            state.uniform.max_iter = i32(max_iter_float)
+
+            mu.layout_row(&state.ui_context, {-1}, 0)
+            if .SUBMIT in mu.button(&state.ui_context, "Reset View") {
+                state.uniform.zoom = 0.5
+                state.zoom_level = math.log2(state.uniform.zoom)
+
+                state.uniform.center = { -0.5, 0.0 }
+                state.uniform.max_iter = 256
+            }            
         }
-        max_iter_float := f32(state.uniform.max_iter)
-        mu.slider(&state.ui_context, &max_iter_float, 8, 1024)
-        state.uniform.max_iter = i32(max_iter_float)
+
+        if .ACTIVE in mu.header(&state.ui_context, "Palette") {
+			palette_row(&state.ui_context, "a:", &state.uniform.palette_a)
+            palette_row(&state.ui_context, "b:", &state.uniform.palette_b)
+            palette_row(&state.ui_context, "c:", &state.uniform.palette_c)
+            palette_row(&state.ui_context, "d:", &state.uniform.palette_d)
+        }
+
         mu.end_window(&state.ui_context)
     }
     mu.end(&state.ui_context)
