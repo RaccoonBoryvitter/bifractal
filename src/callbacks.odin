@@ -263,7 +263,7 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
         if .ACTIVE in mu.header(&state.ui_context, "Presets") {
             button_w := available - PALETTE_SWATCH_WIDTH - spacing
 
-            for preset in palette_presets {
+            for preset in PALETTE_PRESETS {
                 mu.layout_row(
                     &state.ui_context,
                     {button_w, PALETTE_SWATCH_WIDTH},

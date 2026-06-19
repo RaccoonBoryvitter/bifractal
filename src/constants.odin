@@ -1,4 +1,8 @@
+#+feature dynamic-literals
 package main
+
+import mu "vendor:microui"
+import sdl "vendor:sdl3"
 
 // Window configuration
 WINDOW_TITLE :: "Odin Zoom"
@@ -36,3 +40,85 @@ FRACTAL_DEFAULT_MAX_ITER :: 256
 PALETTE_SWATCH_STEPS :: 64
 PALETTE_PRESET_SWATCH_STEPS :: 16
 PALETTE_SWATCH_WIDTH :: 64
+
+// SDL3+microui keyboard mappings
+KEY_MAP := map[sdl.Keycode]mu.Key {
+    sdl.K_LSHIFT    = .SHIFT,
+    sdl.K_RSHIFT    = .SHIFT,
+    sdl.K_LCTRL     = .CTRL,
+    sdl.K_RCTRL     = .CTRL,
+    sdl.K_LGUI      = .CTRL,
+    sdl.K_RGUI      = .CTRL,
+    sdl.K_LALT      = .ALT,
+    sdl.K_RALT      = .ALT,
+    sdl.K_BACKSPACE = .BACKSPACE,
+    sdl.K_DELETE    = .DELETE,
+    sdl.K_RETURN    = .RETURN,
+    sdl.K_LEFT      = .LEFT,
+    sdl.K_RIGHT     = .RIGHT,
+    sdl.K_HOME      = .HOME,
+    sdl.K_END       = .END,
+    sdl.K_A         = .A,
+    sdl.K_X         = .X,
+    sdl.K_C         = .C,
+    sdl.K_V         = .V,
+}
+
+PALETTE_PRESETS := [?]PalettePreset {
+    {
+        name = "Electric",
+        a = {0.5, 0.5, 0.5},
+        b = {0.5, 0.5, 0.5},
+        c = {1.0, 1.0, 1.0},
+        d = {0.0, 0.10, 0.20},
+    },
+    {
+        name = "Fire",
+        a = {0.5, 0.2, 0.1},
+        b = {0.5, 0.4, 0.1},
+        c = {1.0, 0.7, 0.4},
+        d = {0.0, 0.15, 0.20},
+    },
+    {
+        name = "Ocean",
+        a = {0.2, 0.4, 0.6},
+        b = {0.2, 0.3, 0.4},
+        c = {1.0, 1.0, 1.0},
+        d = {0.0, 0.10, 0.25},
+    },
+    {
+        name = "Grayscale",
+        a = {0.5, 0.5, 0.5},
+        b = {0.5, 0.5, 0.5},
+        c = {1.0, 1.0, 1.0},
+        d = {0.0, 0.0, 0.0},
+    },
+    {
+        name = "Candy",
+        a = {0.5, 0.5, 0.5},
+        b = {0.5, 0.5, 0.5},
+        c = {1.0, 0.7, 0.4},
+        d = {0.0, 0.15, 0.20},
+    },
+    {
+        name = "Sunset",
+        a = {0.8, 0.5, 0.4},
+        b = {0.2, 0.4, 0.2},
+        c = {2.0, 1.0, 1.0},
+        d = {0.5, 0.25, 0.25},
+    },
+    {
+        name = "Neon",
+        a = {0.5, 0.5, 0.5},
+        b = {0.5, 0.5, 0.5},
+        c = {0.0, 0.33, 0.67},
+        d = {0.0, 0.10, 0.20},
+    },
+    {
+        name = "Gold",
+        a = {0.5, 0.4, 0.1},
+        b = {0.5, 0.3, 0.1},
+        c = {1.0, 0.8, 0.3},
+        d = {0.0, 0.10, 0.10},
+    },
+}

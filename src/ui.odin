@@ -2,11 +2,16 @@
 package main
 
 import intr "base:intrinsics"
+import "core:strings"
+import "core:unicode"
+import "core:unicode/utf8"
 
 import "core:fmt"
 
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
+
+// Types
 
 @(private = "file")
 RGBA8 :: distinct [4]u8
@@ -20,6 +25,8 @@ UIVertex :: struct {
 UIGlobals :: struct {
     screen_size : [2]f32,
 }
+
+// Functions
 
 create_font_texture :: proc(device : ^sdl.GPUDevice) -> ^sdl.GPUTexture {
     atlas_size := len(mu.default_atlas_alpha)
@@ -163,4 +170,139 @@ palette_row :: proc(ui : ^mu.Context, label : string, color : ^[3]f32) {
     mu.slider(ui, &color.r, 0, 1.0)
     mu.slider(ui, &color.g, 0, 1.0)
     mu.slider(ui, &color.b, 0, 1.0)
+}
+
+// State/pipeline management
+
+init_ui_pipeline :: proc(state : ^AppState) -> bool {
+    ui_vertex_shader := create_gpu_shader(
+        state.gpu.device,
+        UI_VERTEX_SHADER_PATH,
+        .VERTEX,
+        num_uniform_buffers = 1,
+    )
+    if ui_vertex_shader == nil {
+        return false
+    }
+
+    ui_fragment_shader := create_gpu_shader(
+        state.gpu.device,
+        UI_FRAGMENT_SHADER_PATH,
+        .FRAGMENT,
+        num_samplers = 1,
+    )
+    if ui_fragment_shader == nil {
+        return false
+    }
+
+    ui_vertex_buffer_descs := [1]sdl.GPUVertexBufferDescription {
+        {slot = 0, pitch = size_of(UIVertex), input_rate = .VERTEX},
+    }
+
+    ui_vertex_attrs := [3]sdl.GPUVertexAttribute {
+        {location = 0, buffer_slot = 0, format = .FLOAT2, offset = 0},
+        {
+            location = 1,
+            buffer_slot = 0,
+            format = .FLOAT2,
+            offset = size_of(f32) * 2,
+        },
+        {
+            location = 2,
+            buffer_slot = 0,
+            format = .FLOAT4,
+            offset = size_of(f32) * 4,
+        },
+    }
+
+    color_targets := [1]sdl.GPUColorTargetDescription {
+        {
+            format = sdl.GetGPUSwapchainTextureFormat(
+                state.gpu.device,
+                state.window,
+            ),
+            blend_state = {
+                enable_blend = true,
+                color_blend_op = .ADD,
+                alpha_blend_op = .ADD,
+                src_color_blendfactor = .SRC_ALPHA,
+                dst_color_blendfactor = .ONE_MINUS_SRC_ALPHA,
+                src_alpha_blendfactor = .ONE_MINUS_SRC_ALPHA,
+                dst_alpha_blendfactor = .ONE_MINUS_SRC_ALPHA,
+            },
+        },
+    }
+
+    ui_pipeline := sdl.CreateGPUGraphicsPipeline(
+        state.gpu.device,
+        sdl.GPUGraphicsPipelineCreateInfo {
+            vertex_shader = ui_vertex_shader,
+            fragment_shader = ui_fragment_shader,
+            primitive_type = .TRIANGLELIST,
+            vertex_input_state = {
+                num_vertex_buffers = 1,
+                vertex_buffer_descriptions = raw_data(
+                    ui_vertex_buffer_descs[:],
+                ),
+                num_vertex_attributes = 3,
+                vertex_attributes = raw_data(ui_vertex_attrs[:]),
+            },
+            target_info = {
+                num_color_targets = 1,
+                color_target_descriptions = raw_data(color_targets[:]),
+            },
+        },
+    )
+    sdl.ReleaseGPUShader(state.gpu.device, ui_vertex_shader)
+    sdl.ReleaseGPUShader(state.gpu.device, ui_fragment_shader)
+    state.gpu.ui_pipeline = ui_pipeline
+
+    return true
+}
+
+init_ui_resources :: proc(state : ^AppState) {
+    state.gpu.ui_vertex_buffer = sdl.CreateGPUBuffer(
+        state.gpu.device,
+        sdl.GPUBufferCreateInfo {
+            size = size_of(UIVertex) * MAX_UI_VERTICES,
+            usage = {.VERTEX},
+        },
+    )
+    state.gpu.ui_transfer_buffer = sdl.CreateGPUTransferBuffer(
+        state.gpu.device,
+        sdl.GPUTransferBufferCreateInfo {
+            size = size_of(UIVertex) * MAX_UI_VERTICES,
+            usage = .UPLOAD,
+        },
+    )
+
+    state.gpu.ui_font_texture = create_font_texture(state.gpu.device)
+    state.gpu.ui_font_sampler = sdl.CreateGPUSampler(
+        state.gpu.device,
+        sdl.GPUSamplerCreateInfo{min_filter = .NEAREST, mag_filter = .NEAREST},
+    )
+
+    mu.init(&state.ui_context)
+    state.ui_context.text_width = mu.default_atlas_text_width
+    state.ui_context.text_height = mu.default_atlas_text_height
+}
+
+// Input management
+
+on_microui_text_input :: proc(event : ^sdl.Event, state : ^AppState) {
+    c_text := event.text.text
+    if c_text == nil {
+        return
+    }
+
+    text, err := strings.clone_from_cstring(c_text, context.temp_allocator)
+    if err != .None {
+        return
+    }
+    defer delete(text, context.temp_allocator)
+
+    ch, size := utf8.decode_rune(text)
+    if len(text) == size && unicode.is_print(ch) {
+        mu.input_text(&state.ui_context, text)
+    }
 }
