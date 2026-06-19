@@ -4,18 +4,6 @@ import "core:log"
 
 import sdl "vendor:sdl3"
 
-UIVertex :: struct {
-    position: [2]f32,
-    uv: [2]f32,
-    color: [4]f32,
-}
-
-UIGlobals :: struct {
-    screen_size: [2]f32,
-}
-
-MAX_UI_VERTICES :: 65536
-
 create_compute_pipeline :: proc(
     filepath: cstring, 
     device: ^sdl.GPUDevice

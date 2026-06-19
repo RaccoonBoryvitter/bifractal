@@ -1,26 +1,35 @@
 #+feature dynamic-literals
 package main
 
-import "core:strings"
-import "core:unicode"
-import "core:unicode/utf8"
-import "core:math"
+import intr "base:intrinsics"
+
+import "core:fmt"
 
 import sdl "vendor:sdl3"
 import mu  "vendor:microui"
 
+@(private="file")
+RGBA8 :: distinct [4]u8
+
+UIVertex :: struct {
+    position: [2]f32,
+    uv: [2]f32,
+    color: [4]f32,
+}
+
+UIGlobals :: struct {
+    screen_size: [2]f32,
+}
+
 create_font_texture :: proc(device: ^sdl.GPUDevice) -> ^sdl.GPUTexture {
-    atlas_size := mu.DEFAULT_ATLAS_WIDTH * mu.DEFAULT_ATLAS_HEIGHT
+    atlas_size := len(mu.default_atlas_alpha)
+    atlas_byte_size := atlas_size * size_of(RGBA8)
 
-    rgba := make([]u8, atlas_size * 4)
-    defer delete(rgba)
+    raw_atlas := make([]RGBA8, atlas_size)
+    defer delete(raw_atlas)
 
-    for i in 0..<atlas_size {
-        v := mu.default_atlas_alpha[i]
-        rgba[i*4 + 0] = 255
-        rgba[i*4 + 1] = 255
-        rgba[i*4 + 2] = 255
-        rgba[i*4 + 3] = v
+    for alpha, index in mu.default_atlas_alpha {
+        raw_atlas[index] = {255, 255, 255, alpha}
     }
 
     texture := sdl.CreateGPUTexture(device, sdl.GPUTextureCreateInfo{
@@ -34,11 +43,17 @@ create_font_texture :: proc(device: ^sdl.GPUDevice) -> ^sdl.GPUTexture {
     })
 
     transfer_buffer := sdl.CreateGPUTransferBuffer(device, sdl.GPUTransferBufferCreateInfo{
-        size = u32(atlas_size * 4),
+        size = u32(atlas_byte_size),
         usage = .UPLOAD
     })
-    ptr := sdl.MapGPUTransferBuffer(device, transfer_buffer, false)
-    sdl.memcpy(ptr, raw_data(rgba), uint(atlas_size * 4))
+    defer sdl.ReleaseGPUTransferBuffer(device, transfer_buffer)
+
+    raw_transfer_buffer := sdl.MapGPUTransferBuffer(device, transfer_buffer, false)
+    intr.mem_copy_non_overlapping(
+        raw_transfer_buffer, 
+        raw_data(raw_atlas),
+        atlas_byte_size
+    )
     sdl.UnmapGPUTransferBuffer(device, transfer_buffer)
 
     command_buffer := sdl.AcquireGPUCommandBuffer(device)
@@ -60,33 +75,11 @@ create_font_texture :: proc(device: ^sdl.GPUDevice) -> ^sdl.GPUTexture {
     sdl.EndGPUCopyPass(copy_pass)
     ok := sdl.SubmitGPUCommandBuffer(command_buffer)
     if !ok {
-
+        // TODO: replace it with logger from AppState later
+        fmt.panicf("unable to submit GPU command buffer: %s", sdl.GetError())
     }
-    sdl.ReleaseGPUTransferBuffer(device, transfer_buffer)
 
     return texture
-}
-
-KEY_MAP := map[sdl.Keycode]mu.Key{
-	sdl.K_LSHIFT    = .SHIFT,
-	sdl.K_RSHIFT    = .SHIFT,
-	sdl.K_LCTRL     = .CTRL,
-	sdl.K_RCTRL     = .CTRL,
-	sdl.K_LGUI      = .CTRL,
-	sdl.K_RGUI      = .CTRL,
-	sdl.K_LALT      = .ALT,
-	sdl.K_RALT      = .ALT,
-	sdl.K_BACKSPACE = .BACKSPACE,
-	sdl.K_DELETE    = .DELETE,
-	sdl.K_RETURN    = .RETURN,
-	sdl.K_LEFT      = .LEFT,
-	sdl.K_RIGHT     = .RIGHT,
-	sdl.K_HOME      = .HOME,
-	sdl.K_END       = .END,
-	sdl.K_A         = .A,
-	sdl.K_X         = .X,
-	sdl.K_C         = .C,
-	sdl.K_V         = .V,
 }
 
 push_rect :: proc(
@@ -135,51 +128,6 @@ push_rect_uv :: proc(
     vertices^[count^ + 4] = { {x1, y1}, {u1, v1}, c }
     vertices^[count^ + 5] = { {x0, y1}, {u0, v1}, c }
     count^ += 6
-}
-
-on_microui_text_input :: proc(event: ^sdl.Event, state: ^AppState) {
-    c_text := event.text.text
-    if c_text == nil {
-        return
-    }
-
-    text, err := strings.clone_from_cstring(c_text, context.temp_allocator)
-    if err != .None {
-        return
-    }
-    defer delete(text, context.temp_allocator)
-
-    ch, size := utf8.decode_rune(text)
-    if len(text) == size && unicode.is_print(ch) {
-        mu.input_text(&state.ui_context, text)
-    }
-}
-
-screen_to_complex :: proc(
-    screen_x, screen_y: f32,
-    window_width, window_height: u32,
-    center: [2]f32,
-    zoom: f32
-) -> complex64 {
-    w := f32(window_width)
-    h := f32(window_height)
-    return complex(
-        (screen_x - w * 0.5) / (h * zoom) + center.x,
-        (screen_y - h * 0.5) / (h * zoom) + center.y
-    )
-}
-
-cosine_palette_cpu :: proc(t: f32, a, b, c, d: [3]f32) -> [3]f32 {
-    color := [3]f32{
-        a.r + b.r * math.cos(2 * math.PI * (c.r * t + d.r)),
-        a.g + b.g * math.cos(2 * math.PI * (c.g * t + d.g)),
-        a.b + b.b * math.cos(2 * math.PI * (c.b * t + d.b)),
-    }
-    return {
-        math.clamp(color.r, 0, 1),
-        math.clamp(color.g, 0, 1),
-        math.clamp(color.b, 0, 1),
-    }
 }
 
 palette_row :: proc(ui: ^mu.Context, label: string, color: ^[3]f32) {

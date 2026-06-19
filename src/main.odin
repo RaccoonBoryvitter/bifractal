@@ -1,16 +1,16 @@
 package main
 
+import "core:c"
+import "core:os"
 import "base:runtime"
 import "core:strings"
-import "core:os"
-import "core:c"
 
 import sdl "vendor:sdl3"
 
 main :: proc() {
-    argc := cast(c.int)len(os.args)
-    argv := make([]cstring, argc)
-    defer delete(argv)
+    arg_c := (c.int)(len(os.args))
+    arg_v := make([]cstring, arg_c)
+    defer delete(arg_v)
 
     for arg, i in os.args {
         c_arg, err := strings.clone_to_cstring(arg)
@@ -18,9 +18,9 @@ main :: proc() {
             panic("unexpected error ocurred while trying to retrieve application arguments")
         }
 
-        argv[i] = c_arg
+        arg_v[i] = c_arg
     }
-    defer for arg in argv {
+    defer for arg in arg_v {
         delete (arg)
     }
 
@@ -34,5 +34,5 @@ main :: proc() {
             SDL_AppQuit
         )
     }
-    sdl.RunApp(argc, raw_data(argv), main_callback, nil)
+    sdl.RunApp(arg_c, raw_data(arg_v), main_callback, nil)
 }
