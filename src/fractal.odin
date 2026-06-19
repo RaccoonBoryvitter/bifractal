@@ -96,6 +96,48 @@ init_fractal_compute :: proc(state : ^AppState) -> bool {
 
 // Input management
 
+handle_fractal_events :: proc(
+    event : ^sdl.Event,
+    state : ^AppState,
+) -> sdl.AppResult {
+    #partial switch event.type {
+        case .QUIT, .WINDOW_CLOSE_REQUESTED: return .SUCCESS
+        case .KEY_DOWN: handle_fractal_keyboard_input(state, event.key.key)
+        case .MOUSE_WHEEL: if state.ui_context.hover_root == nil {
+                    handle_fractal_zoom(state, event)
+                }
+        case .MOUSE_BUTTON_UP: if event.button.button == sdl.BUTTON_LEFT {
+                    return end_fractal_drag(state)
+                }
+        case .MOUSE_BUTTON_DOWN: if event.button.button == sdl.BUTTON_LEFT {
+                    return start_fractal_drag(state)
+                }
+        case .MOUSE_MOTION: handle_fractal_drag(state, event)
+        case .WINDOW_PIXEL_SIZE_CHANGED: handle_resize(event, state)
+    }
+
+    return .CONTINUE
+}
+
+@(private = "file")
+handle_resize :: proc(event : ^sdl.Event, state : ^AppState) {
+    event_window := event.window
+    state.window_width = u32(event_window.data1)
+    state.window_height = u32(event_window.data2)
+    state.fractal.uniform.resolution = {
+        f32(event_window.data1),
+        f32(event_window.data2),
+    }
+
+    sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
+    state.gpu.texture = create_output_texture(
+        state.gpu.device,
+        state.window_width,
+        state.window_height,
+    )
+}
+
+@(private = "file")
 handle_fractal_keyboard_input :: proc(
     state : ^AppState,
     keycode : sdl.Keycode,
@@ -131,6 +173,7 @@ handle_fractal_keyboard_input :: proc(
     }
 }
 
+@(private = "file")
 handle_fractal_zoom :: proc(state : ^AppState, event : ^sdl.Event) {
     mouse_x, mouse_y : f32
     _ = sdl.GetMouseState(&mouse_x, &mouse_y)
@@ -158,6 +201,7 @@ handle_fractal_zoom :: proc(state : ^AppState, event : ^sdl.Event) {
     state.fractal.uniform.center.y += mouse_complex.y - new_mouse_complex.y
 }
 
+@(private = "file")
 handle_fractal_drag :: proc(state : ^AppState, event : ^sdl.Event) {
     if !state.fractal.is_dragging || state.ui_context.hover_root != nil {
         return
@@ -173,6 +217,7 @@ handle_fractal_drag :: proc(state : ^AppState, event : ^sdl.Event) {
     state.fractal.uniform.center.y -= dy * scale
 }
 
+@(private = "file")
 start_fractal_drag :: proc(state : ^AppState) -> sdl.AppResult {
     if state.ui_context.hover_root != nil {
         return .CONTINUE
@@ -187,6 +232,7 @@ start_fractal_drag :: proc(state : ^AppState) -> sdl.AppResult {
     return .CONTINUE
 }
 
+@(private = "file")
 end_fractal_drag :: proc(state : ^AppState) -> sdl.AppResult {
     state.fractal.is_dragging = false
     ok := sdl.SetCursor(state.fractal.default_cursor)

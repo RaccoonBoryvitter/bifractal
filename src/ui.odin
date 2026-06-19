@@ -289,6 +289,64 @@ init_ui_resources :: proc(state : ^AppState) {
 
 // Input management
 
+handle_ui_events :: proc(event : ^sdl.Event, state : ^AppState) {
+    #partial switch event.type {
+        case .MOUSE_MOTION:
+            mu.input_mouse_move(
+                    &state.ui_context,
+                    i32(event.motion.x),
+                    i32(event.motion.y),
+                )
+        case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
+            btn : mu.Mouse
+            switch event.button.button {
+                case sdl.BUTTON_LEFT: btn = .LEFT
+                case sdl.BUTTON_MIDDLE: btn = .MIDDLE
+                case sdl.BUTTON_RIGHT: btn = .RIGHT
+            }
+            if event.type == .MOUSE_BUTTON_DOWN {
+                mu.input_mouse_down(
+                    &state.ui_context,
+                    i32(event.button.x),
+                    i32(event.button.y),
+                    btn,
+                )
+            }
+             else {
+                mu.input_mouse_up(
+                    &state.ui_context,
+                    i32(event.button.x),
+                    i32(event.button.y),
+                    btn,
+                )
+            }
+        case .MOUSE_WHEEL: if state.ui_context.hover_root != nil {
+                    mu.input_scroll(
+                        &state.ui_context,
+                        0,
+                        i32(event.wheel.y * -30),
+                    )
+                }
+        case .TEXT_INPUT: on_microui_text_input(event, state)
+        case .KEY_DOWN, .KEY_UP:
+            k, ok := KEY_MAP[event.key.key]
+            if !ok {
+                break
+            }
+            if event.type == .KEY_DOWN {
+                mu.input_key_down(&state.ui_context, k)
+            }
+             else {
+                mu.input_key_up(&state.ui_context, k)
+            }
+
+            if .CTRL in state.ui_context.key_down_bits {
+                break
+            }
+    }
+}
+
+@(private = "file")
 on_microui_text_input :: proc(event : ^sdl.Event, state : ^AppState) {
     c_text := event.text.text
     if c_text == nil {

@@ -33,94 +33,12 @@ SDL_AppEvent :: proc "c" (
     state := (^AppState)(appstate)
     context = state.ctx
 
-    // UI input handling
-    #partial switch event.type {
-        case .MOUSE_MOTION:
-            mu.input_mouse_move(
-                    &state.ui_context,
-                    i32(event.motion.x),
-                    i32(event.motion.y),
-                )
-        case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
-            btn : mu.Mouse
-            switch event.button.button {
-                case sdl.BUTTON_LEFT: btn = .LEFT
-                case sdl.BUTTON_MIDDLE: btn = .MIDDLE
-                case sdl.BUTTON_RIGHT: btn = .RIGHT
-            }
-            if event.type == .MOUSE_BUTTON_DOWN {
-                mu.input_mouse_down(
-                    &state.ui_context,
-                    i32(event.button.x),
-                    i32(event.button.y),
-                    btn,
-                )
-            }
-             else {
-                mu.input_mouse_up(
-                    &state.ui_context,
-                    i32(event.button.x),
-                    i32(event.button.y),
-                    btn,
-                )
-            }
-        case .MOUSE_WHEEL: if state.ui_context.hover_root != nil {
-                    mu.input_scroll(
-                        &state.ui_context,
-                        0,
-                        i32(event.wheel.y * -30),
-                    )
-                }
-        case .TEXT_INPUT: on_microui_text_input(event, state)
-        case .KEY_DOWN, .KEY_UP:
-            k, ok := KEY_MAP[event.key.key]
-            if !ok {
-                break
-            }
-            if event.type == .KEY_DOWN {
-                mu.input_key_down(&state.ui_context, k)
-            }
-             else {
-                mu.input_key_up(&state.ui_context, k)
-            }
-
-            if .CTRL in state.ui_context.key_down_bits {
-                break
-            }
-    }
+    handle_ui_events(event, state)
 
     // Fractal input handling
-    #partial switch event.type {
-        case .QUIT, .WINDOW_CLOSE_REQUESTED: return .SUCCESS
-        case .KEY_DOWN: handle_fractal_keyboard_input(state, event.key.key)
-        case .MOUSE_WHEEL: if state.ui_context.hover_root == nil {
-                    handle_fractal_zoom(state, event)
-                }
-        case .MOUSE_BUTTON_UP: if event.button.button == sdl.BUTTON_LEFT {
-                    result := end_fractal_drag(state)
-                    if result != .CONTINUE {
-                        return result
-                    }
-                }
-        case .MOUSE_BUTTON_DOWN: if event.button.button == sdl.BUTTON_LEFT {
-                    result := start_fractal_drag(state)
-                    if result != .CONTINUE {
-                        return result
-                    }
-                }
-        case .MOUSE_MOTION: handle_fractal_drag(state, event)
-        case .WINDOW_PIXEL_SIZE_CHANGED:
-            e := event.window
-            state.window_width = u32(e.data1)
-            state.window_height = u32(e.data2)
-            state.fractal.uniform.resolution = {f32(e.data1), f32(e.data2)}
-
-            sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
-            state.gpu.texture = create_output_texture(
-                state.gpu.device,
-                state.window_width,
-                state.window_height,
-            )
+    fractal_result := handle_fractal_events(event, state)
+    if fractal_result != .CONTINUE {
+        return fractal_result
     }
 
     return .CONTINUE
