@@ -44,12 +44,25 @@ SDL_AppEvent :: proc "c" (
     return .CONTINUE
 }
 
+fps_update :: proc(state : ^AppState) {
+    state.fps_frame_count += 1
+    now := sdl.GetTicks()
+    elapsed := now - state.fps_last_ticks
+
+    if elapsed >= FPS_INTERVAL_MS {
+        state.fps_current = f32(state.fps_frame_count) / (f32(elapsed) / 1000.0)
+        state.fps_frame_count = 0
+        state.fps_last_ticks = now
+    }
+}
+
 @(export)
 SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
     state := (^AppState)(appstate)
     context = state.ctx
     defer free_all(context.temp_allocator)
 
+    fps_update(state)
     create_ui(state)
     vertex_count := handle_mu_commands(state)
 

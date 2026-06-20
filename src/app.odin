@@ -77,5 +77,7 @@ init_app :: proc(ctx : runtime.Context) -> ^AppState {
 
     init_ui_resources(state)
 
+    state.fps_last_ticks = sdl.GetTicks()
+
     return state
 }

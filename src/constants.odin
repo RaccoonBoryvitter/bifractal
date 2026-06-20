@@ -122,3 +122,5 @@ PALETTE_PRESETS := [?]PalettePreset {
         d = {0.0, 0.10, 0.10},
     },
 }
+
+FPS_INTERVAL_MS :: 500

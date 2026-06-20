@@ -294,7 +294,10 @@ create_ui :: proc(state : ^AppState) {
         mu.layout_row(ui_ctx, {-1}, 0)
 
         mu.label(ui_ctx, "FPS:")
-        mu.label(ui_ctx, "to be done")
+        mu.label(ui_ctx, fmt.tprintf("{:.1f}", state.fps_current))
+
+        mu.label(ui_ctx, "Frame time:")
+        mu.label(ui_ctx, fmt.tprintf("%.2f ms", 1000.0 / max(state.fps_current, 0.001)))
 
         mu.label(ui_ctx, "GPU:")
         gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)

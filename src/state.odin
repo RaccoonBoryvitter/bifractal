@@ -13,4 +13,8 @@ AppState :: struct {
     gpu :           GPUResources,
     fractal :       FractalState,
     ui_context :    mu.Context,
+
+    fps_frame_count: u32,
+    fps_last_ticks:  u64,
+    fps_current:     f32,
 }
