@@ -170,6 +170,10 @@ handle_fractal_keyboard_input :: proc(
                     &state.fractal.uniform,
                     &state.fractal.zoom_level,
                 )
+        case sdl.K_F11:
+            window_flags := sdl.GetWindowFlags(state.window)
+            is_fullscreen := .FULLSCREEN in window_flags
+            sdl.SetWindowFullscreen(state.window, !is_fullscreen)
     }
 }
 
