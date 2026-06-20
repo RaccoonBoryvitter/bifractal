@@ -313,6 +313,65 @@ create_ui :: proc(state : ^AppState) {
     }
 }
 
+handle_mu_commands :: proc(
+    state : ^AppState
+) -> int
+{
+    vertex_count := 0
+
+    vertices_ptr := (^UIVertex)(
+        sdl.MapGPUTransferBuffer(
+            state.gpu.device,
+            state.gpu.ui_transfer_buffer,
+            false,
+        ),
+    )
+    defer sdl.UnmapGPUTransferBuffer(state.gpu.device, state.gpu.ui_transfer_buffer)
+
+    vertices := ([^]UIVertex)(vertices_ptr)[:MAX_UI_VERTICES]
+    cmd_iter : ^mu.Command
+
+    for mu.next_command(&state.ui_context, &cmd_iter) {
+        #partial switch cmd in cmd_iter.variant {
+            case ^mu.Command_Rect:
+                push_rect(
+                        &vertices,
+                        &vertex_count,
+                        cmd.rect,
+                        {0, 0, 0, 0},
+                        cmd.color,
+                    )
+            case ^mu.Command_Text: for ch in cmd.str {
+                        if ch < 32 || int(ch) >= 128 do continue
+                        src :=
+                            mu.default_atlas[mu.DEFAULT_ATLAS_FONT + int(ch)]
+                        dst := mu.Rect{cmd.pos.x, cmd.pos.y, src.w, src.h}
+                        push_rect_uv(
+                            &vertices,
+                            &vertex_count,
+                            dst,
+                            src,
+                            cmd.color,
+                        )
+                        cmd.pos.x += src.w
+                    }
+            case ^mu.Command_Icon:
+                src := mu.default_atlas[cmd.id]
+                x := cmd.rect.x + (cmd.rect.w - src.w) / 2
+                y := cmd.rect.y + (cmd.rect.h - src.h) / 2
+                push_rect_uv(
+                    &vertices,
+                    &vertex_count,
+                    mu.Rect{x, y, src.w, src.h},
+                    src,
+                    cmd.color,
+                )
+        }
+    }
+
+    return vertex_count
+}
+
 push_rect :: proc(
     vertices : ^[]UIVertex,
     count : ^int,
