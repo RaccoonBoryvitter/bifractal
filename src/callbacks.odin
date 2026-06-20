@@ -64,8 +64,12 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
         spacing := state.ui_context.style.spacing
         available := container.body.w - padding * 2
 
-        if .ACTIVE in
-           mu.header(&state.ui_context, "Zoom and Pan", {.EXPANDED}) {
+        zoom_pan_header := mu.header(
+            &state.ui_context,
+            "Zoom and Pan",
+            {.EXPANDED},
+        )
+        if .ACTIVE in zoom_pan_header {
             mu.layout_row(&state.ui_context, {60, -1}, 0)
 
             mu.label(&state.ui_context, "Zoom:")
@@ -74,6 +78,16 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
             mu.label(
                 &state.ui_context,
                 fmt.tprintf(zoom_format, state.fractal.uniform.zoom),
+            )
+
+            mu.label(&state.ui_context, "Center:")
+            mu.label(
+                &state.ui_context,
+                fmt.tprintf(
+                    "{:+.6f} {:+.6f}i",
+                    state.fractal.uniform.center.x,
+                    state.fractal.uniform.center.y,
+                ),
             )
 
             if state.ui_context.hover_root == nil {
@@ -89,22 +103,18 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
                     state.fractal.uniform.zoom,
                 )
 
-                mu.label(&state.ui_context, "Re:")
+                mu.label(&state.ui_context, "Mouse:")
                 mu.label(
-                    &state.ui_context,
-                    fmt.tprintf("%.6f", real(complex_coords)),
-                )
-
-                mu.label(&state.ui_context, "Im:")
-                mu.label(
-                    &state.ui_context,
-                    fmt.tprintf("%.6f", imag(complex_coords)),
-                )
+                &state.ui_context,
+                fmt.tprintf(
+                    "{:+.6f} {:+.6f}i",
+                    real(complex_coords),
+                    imag(complex_coords),
+                ),
+            )
             }
              else {
-                mu.label(&state.ui_context, "Re:")
-                mu.label(&state.ui_context, "--")
-                mu.label(&state.ui_context, "Im:")
+                mu.label(&state.ui_context, "Mouse:")
                 mu.label(&state.ui_context, "--")
             }
 
@@ -115,7 +125,8 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
             state.fractal.uniform.max_iter = i32(max_iter_float)
 
             mu.layout_row(&state.ui_context, {-1}, 0)
-            if .SUBMIT in mu.button(&state.ui_context, "Reset View") {
+            reset_button := mu.button(&state.ui_context, "Reset View")
+            if .SUBMIT in reset_button {
                 reset_fractal_view(
                     &state.fractal.uniform,
                     &state.fractal.zoom_level,
@@ -123,7 +134,8 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
             }
         }
 
-        if .ACTIVE in mu.header(&state.ui_context, "Palette") {
+        palette_header := mu.header(&state.ui_context, "Palette")
+        if .ACTIVE in palette_header {
             mu.layout_row(&state.ui_context, {-1}, 12)
             swatch_rect := mu.layout_next(&state.ui_context)
 
@@ -178,7 +190,8 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
             )
         }
 
-        if .ACTIVE in mu.header(&state.ui_context, "Presets") {
+        presets_header := mu.header(&state.ui_context, "Presets")
+        if .ACTIVE in presets_header {
             button_w := available - PALETTE_SWATCH_WIDTH - spacing
 
             for preset in PALETTE_PRESETS {
@@ -188,7 +201,8 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
                     0,
                 )
 
-                if .SUBMIT in mu.button(&state.ui_context, preset.name) {
+                preset_button := mu.button(&state.ui_context, preset.name)
+                if .SUBMIT in preset_button {
                     apply_palette_preset(&state.fractal.uniform, preset)
                 }
 
