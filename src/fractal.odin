@@ -76,8 +76,8 @@ init_fractal_state :: proc(state : ^AppState) -> FractalState {
 
 init_fractal_compute :: proc(state : ^AppState) -> bool {
     compute_pipeline := create_compute_pipeline(
-        MANDELBROT_SHADER_PATH,
         state.gpu.device,
+        "mandelbrot",
     )
     if compute_pipeline == nil {
         log.errorf("unable to create GPU compute pipeline: %s", sdl.GetError())

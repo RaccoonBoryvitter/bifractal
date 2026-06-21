@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:log"
 
 import sdl "vendor:sdl3"
@@ -20,9 +21,17 @@ GPUResources :: struct {
 // Functions
 
 create_compute_pipeline :: proc(
-    filepath : cstring,
     device : ^sdl.GPUDevice,
+    name : string,
 ) -> ^sdl.GPUComputePipeline {
+    format, ext := get_shader_format(device)
+
+    filepath := fmt.ctprintf(
+        "../assets/shaders/compiled/%s.%s",
+        name,
+        ext
+    )
+
     size : uint
     code := sdl.LoadFile(filepath, &size)
     defer sdl.free(code)
@@ -32,8 +41,8 @@ create_compute_pipeline :: proc(
         sdl.GPUComputePipelineCreateInfo {
             code = (^u8)(code),
             code_size = size,
-            entrypoint = "main",
-            format = {.SPIRV},
+            entrypoint = format == .MSL ? "main0" : "main",
+            format = {format},
             num_uniform_buffers = 1,
             num_readwrite_storage_textures = 1,
             threadcount_x = 8,
@@ -42,18 +51,30 @@ create_compute_pipeline :: proc(
         },
     )
 
+    if compute_pipeline == nil {
+        log.errorf("failed to create compute pipeline \"%s\": %s", filepath, sdl.GetError())
+    }
+
     return compute_pipeline
 }
 
 create_gpu_shader :: proc(
     device : ^sdl.GPUDevice,
-    filepath : cstring,
+    name : string,
     shader_type : sdl.GPUShaderStage,
     num_uniform_buffers : u32 = 0,
     num_samplers : u32 = 0,
     num_storage_textures : u32 = 0,
     num_storage_buffers : u32 = 0,
 ) -> ^sdl.GPUShader {
+    format, ext := get_shader_format(device)
+
+    filepath := fmt.ctprintf(
+        "../assets/shaders/compiled/%s.%s",
+        name,
+        ext
+    )
+
     size : uint
     code := sdl.LoadFile(filepath, &size)
     if code == nil {
@@ -67,8 +88,8 @@ create_gpu_shader :: proc(
         sdl.GPUShaderCreateInfo {
             code = (^u8)(code),
             code_size = size,
-            entrypoint = "main",
-            format = {.SPIRV},
+            entrypoint = format == .MSL ? "main0" : "main",
+            format = {format},
             stage = shader_type,
             num_uniform_buffers = num_uniform_buffers,
             num_samplers = num_samplers,
@@ -92,7 +113,7 @@ create_output_texture :: proc(
         device,
         sdl.GPUTextureCreateInfo {
             type = .D2,
-            format = .R8G8B8A8_UNORM,
+            format = .R32G32B32A32_FLOAT,
             width = width,
             height = height,
             layer_count_or_depth = 1,
@@ -100,4 +121,13 @@ create_output_texture :: proc(
             usage = {.COMPUTE_STORAGE_WRITE, .SAMPLER, .COMPUTE_STORAGE_READ},
         },
     )
+}
+
+get_shader_format :: proc(device: ^sdl.GPUDevice) -> (sdl.GPUShaderFormatFlag, string) {
+    formats := sdl.GetGPUShaderFormats(device)
+    if .SPIRV in formats do return .SPIRV, "spv"
+    if .DXIL  in formats do return .DXIL,  "dxil"
+    if .DXBC  in formats do return .DXBC,  "dxbc"
+    if .MSL   in formats do return .MSL,   "msl"
+    panic("no supported shader format")
 }

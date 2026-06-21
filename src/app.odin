@@ -27,7 +27,7 @@ init_sdl_window :: proc() -> ^sdl.Window {
 }
 
 init_gpu :: proc(window : ^sdl.Window) -> ^sdl.GPUDevice {
-    gpu_device := sdl.CreateGPUDevice({.SPIRV}, true, nil)
+    gpu_device := sdl.CreateGPUDevice({.SPIRV, .DXIL, .MSL}, true, nil)
     if gpu_device == nil {
         log.errorf("unable to create SDL GPU device: %s", sdl.GetError())
         return nil

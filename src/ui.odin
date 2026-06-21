@@ -308,6 +308,10 @@ create_ui :: proc(state : ^AppState) {
         )
         mu.label(ui_ctx, string(gpu_name))
 
+        mu.label(ui_ctx, "Graphics API:")
+        driver := sdl.GetGPUDeviceDriver(state.gpu.device)
+        mu.label(ui_ctx, string(driver))
+
         mu.label(ui_ctx, "Resolution:")
         mu.label(
             ui_ctx,
@@ -453,7 +457,7 @@ palette_row :: proc(ui : ^mu.Context, label : string, color : ^[3]f32) {
 init_ui_pipeline :: proc(state : ^AppState) -> bool {
     ui_vertex_shader := create_gpu_shader(
         state.gpu.device,
-        UI_VERTEX_SHADER_PATH,
+        "ui.vert",
         .VERTEX,
         num_uniform_buffers = 1,
     )
@@ -463,7 +467,7 @@ init_ui_pipeline :: proc(state : ^AppState) -> bool {
 
     ui_fragment_shader := create_gpu_shader(
         state.gpu.device,
-        UI_FRAGMENT_SHADER_PATH,
+        "ui.frag",
         .FRAGMENT,
         num_samplers = 1,
     )
