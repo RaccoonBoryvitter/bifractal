@@ -5,7 +5,7 @@ import "core:log"
 
 import sdl "vendor:sdl3"
 
-init_sdl_window :: proc() -> ^sdl.Window {
+init_window :: proc() -> ^sdl.Window {
     ok := sdl.Init({.VIDEO, .EVENTS})
     if !ok {
         log.errorf("unable to initialize SDL: %s", sdl.GetError())
@@ -42,14 +42,14 @@ init_gpu :: proc(window : ^sdl.Window) -> ^sdl.GPUDevice {
     return gpu_device
 }
 
-init_app :: proc(ctx : runtime.Context) -> ^AppState {
+init_app :: proc(ctx : runtime.Context) -> ^App_State {
     context = ctx
 
-    state := new(AppState)
+    state := new(App_State)
     state.ctx = context
     context.logger = log.create_console_logger()
 
-    state.window = init_sdl_window()
+    state.window = init_window()
     if state.window == nil {
         return nil
     }
@@ -65,7 +65,11 @@ init_app :: proc(ctx : runtime.Context) -> ^AppState {
         return nil
     }
 
-    pipeline, texture, ok := init_fractal_compute(state.gpu.device, state.window_width, state.window_height)
+    pipeline, texture, ok := init_fractal_compute(
+        state.gpu.device,
+        state.window_width,
+        state.window_height,
+    )
     if !ok {
         return nil
     }

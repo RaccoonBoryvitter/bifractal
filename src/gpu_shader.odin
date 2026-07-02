@@ -5,7 +5,7 @@ import "core:log"
 
 import sdl "vendor:sdl3"
 
-create_gpu_shader :: proc(
+create_shader :: proc(
     device : ^sdl.GPUDevice,
     name : string,
     shader_type : sdl.GPUShaderStage,
@@ -16,11 +16,7 @@ create_gpu_shader :: proc(
 ) -> ^sdl.GPUShader {
     format, ext := get_shader_format(device)
 
-    filepath := fmt.ctprintf(
-        "../assets/shaders/compiled/%s.%s",
-        name,
-        ext,
-    )
+    filepath := fmt.ctprintf("../assets/shaders/compiled/%s.%s", name, ext)
 
     size : uint
     code := sdl.LoadFile(filepath, &size)
@@ -52,11 +48,16 @@ create_gpu_shader :: proc(
     return shader
 }
 
-get_shader_format :: proc(device : ^sdl.GPUDevice) -> (sdl.GPUShaderFormatFlag, string) {
+get_shader_format :: proc(
+    device : ^sdl.GPUDevice,
+) -> (
+    sdl.GPUShaderFormatFlag,
+    string,
+) {
     formats := sdl.GetGPUShaderFormats(device)
     if .SPIRV in formats do return .SPIRV, "spv"
-    if .DXIL  in formats do return .DXIL, "dxil"
-    if .DXBC  in formats do return .DXBC, "dxbc"
-    if .MSL   in formats do return .MSL, "msl"
+    if .DXIL in formats do return .DXIL, "dxil"
+    if .DXBC in formats do return .DXBC, "dxbc"
+    if .MSL in formats do return .MSL, "msl"
     panic("no supported shader format")
 }

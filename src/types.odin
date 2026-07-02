@@ -5,7 +5,7 @@ import "base:runtime"
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
-GPUResources :: struct {
+Gpu_Resources :: struct {
     device :             ^sdl.GPUDevice,
     compute_pipeline :   ^sdl.GPUComputePipeline,
     texture :            ^sdl.GPUTexture,
@@ -16,7 +16,7 @@ GPUResources :: struct {
     ui_font_sampler :    ^sdl.GPUSampler,
 }
 
-FractalUniform :: struct {
+Fractal_Uniform :: struct {
     center :     [2]f32,
     zoom :       f32,
     max_iter :   i32,
@@ -31,15 +31,15 @@ FractalUniform :: struct {
     resolution : [2]f32,
 }
 
-FractalState :: struct {
-    uniform :        FractalUniform,
+Fractal_State :: struct {
+    uniform :        Fractal_Uniform,
     zoom_level :     f32,
     is_dragging :    bool,
     default_cursor : ^sdl.Cursor,
     move_cursor :    ^sdl.Cursor,
 }
 
-PalettePreset :: struct {
+Palette_Preset :: struct {
     name : string,
     a :    [3]f32,
     b :    [3]f32,
@@ -47,23 +47,23 @@ PalettePreset :: struct {
     d :    [3]f32,
 }
 
-UIVertex :: struct {
+Ui_Vertex :: struct {
     position : [2]f32,
     uv :       [2]f32,
     color :    [4]f32,
 }
 
-UIGlobals :: struct {
+Ui_Globals :: struct {
     screen_size : [2]f32,
 }
 
-AppState :: struct {
+App_State :: struct {
     ctx :             runtime.Context,
     window :          ^sdl.Window,
     window_width :    u32,
     window_height :   u32,
-    gpu :             GPUResources,
-    fractal :         FractalState,
+    gpu :             Gpu_Resources,
+    fractal :         Fractal_State,
     ui_context :      mu.Context,
     fps_frame_count : u32,
     fps_last_ticks :  u64,

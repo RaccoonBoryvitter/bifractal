@@ -4,33 +4,33 @@ import "core:log"
 
 import sdl "vendor:sdl3"
 
-render_frame :: proc(state : ^AppState, vertex_count : int) -> sdl.AppResult {
+render_frame :: proc(state : ^App_State, vertex_count : int) -> sdl.AppResult {
     command_buffer := sdl.AcquireGPUCommandBuffer(state.gpu.device)
 
-    storageTextureBindings := [1]sdl.GPUStorageTextureReadWriteBinding {
+    storage_texture_bindings := [1]sdl.GPUStorageTextureReadWriteBinding {
         {texture = state.gpu.texture},
     }
-    computePass := sdl.BeginGPUComputePass(
+    compute_pass := sdl.BeginGPUComputePass(
         command_buffer,
-        raw_data(storageTextureBindings[:]),
+        raw_data(storage_texture_bindings[:]),
         1,
         nil,
         0,
     )
-    sdl.BindGPUComputePipeline(computePass, state.gpu.compute_pipeline)
+    sdl.BindGPUComputePipeline(compute_pass, state.gpu.compute_pipeline)
     sdl.PushGPUComputeUniformData(
         command_buffer,
         0,
         &state.fractal.uniform,
-        size_of(FractalUniform),
+        size_of(Fractal_Uniform),
     )
     sdl.DispatchGPUCompute(
-        computePass,
+        compute_pass,
         (state.window_width + 7) / 8,
         (state.window_height + 7) / 8,
         1,
     )
-    sdl.EndGPUComputePass(computePass)
+    sdl.EndGPUComputePass(compute_pass)
 
     if vertex_count > 0 {
         ui_copy_pass := sdl.BeginGPUCopyPass(command_buffer)
@@ -41,20 +41,20 @@ render_frame :: proc(state : ^AppState, vertex_count : int) -> sdl.AppResult {
             },
             sdl.GPUBufferRegion {
                 buffer = state.gpu.ui_vertex_buffer,
-                size = u32(vertex_count * size_of(UIVertex)),
+                size = u32(vertex_count * size_of(Ui_Vertex)),
             },
             false,
         )
         sdl.EndGPUCopyPass(ui_copy_pass)
     }
 
-    swapchainTexture : ^sdl.GPUTexture
+    swapchain_texture : ^sdl.GPUTexture
     width, height : u32
 
     ok := sdl.WaitAndAcquireGPUSwapchainTexture(
         command_buffer,
         state.window,
-        &swapchainTexture,
+        &swapchain_texture,
         &width,
         &height,
     )
@@ -62,7 +62,7 @@ render_frame :: proc(state : ^AppState, vertex_count : int) -> sdl.AppResult {
         log.errorf("unable to acquire swapchain texture: %s", sdl.GetError())
         return .FAILURE
     }
-    if swapchainTexture == nil {
+    if swapchain_texture == nil {
         ok = sdl.SubmitGPUCommandBuffer(command_buffer)
         if !ok {
             log.errorf(
@@ -87,7 +87,7 @@ render_frame :: proc(state : ^AppState, vertex_count : int) -> sdl.AppResult {
                 y = 0,
             },
             destination = {
-                texture = swapchainTexture,
+                texture = swapchain_texture,
                 w = width,
                 h = height,
                 mip_level = 0,
@@ -102,7 +102,7 @@ render_frame :: proc(state : ^AppState, vertex_count : int) -> sdl.AppResult {
 
     if vertex_count > 0 {
         color_target := sdl.GPUColorTargetInfo {
-            texture  = swapchainTexture,
+            texture  = swapchain_texture,
             load_op  = .LOAD,
             store_op = .STORE,
         }
@@ -114,14 +114,14 @@ render_frame :: proc(state : ^AppState, vertex_count : int) -> sdl.AppResult {
         )
         sdl.BindGPUGraphicsPipeline(render_pass, state.gpu.ui_pipeline)
 
-        globals := UIGlobals {
+        globals := Ui_Globals {
             screen_size = {f32(width), f32(height)},
         }
         sdl.PushGPUVertexUniformData(
             command_buffer,
             0,
             &globals,
-            size_of(UIGlobals),
+            size_of(Ui_Globals),
         )
 
         buf_binding := [1]sdl.GPUBufferBinding {

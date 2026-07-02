@@ -5,8 +5,8 @@ import "core:math"
 // Functions
 
 apply_palette_preset :: proc(
-    uniform : ^FractalUniform,
-    preset : PalettePreset,
+    uniform : ^Fractal_Uniform,
+    preset : Palette_Preset,
 ) {
     uniform.palette_a = preset.a
     uniform.palette_b = preset.b

@@ -21,7 +21,7 @@ screen_to_complex :: proc(
     )
 }
 
-reset_fractal_view :: proc(uniform : ^FractalUniform, zoom_level : ^f32) {
+reset_fractal_view :: proc(uniform : ^Fractal_Uniform, zoom_level : ^f32) {
     uniform.zoom = FRACTAL_DEFAULT_ZOOM
     zoom_level^ = math.log2(uniform.zoom)
     uniform.center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y}
@@ -30,9 +30,11 @@ reset_fractal_view :: proc(uniform : ^FractalUniform, zoom_level : ^f32) {
 
 // State management
 
-init_fractal_state :: proc(window_width, window_height : u32) -> FractalState {
+init_fractal_state :: proc(
+    window_width, window_height : u32,
+) -> Fractal_State {
     zoom := FRACTAL_DEFAULT_ZOOM
-    return FractalState {
+    return Fractal_State {
         uniform = {
             center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y},
             zoom = FRACTAL_DEFAULT_ZOOM,
@@ -72,7 +74,7 @@ init_fractal_compute :: proc(
 
 handle_fractal_events :: proc(
     event : ^sdl.Event,
-    fractal : ^FractalState,
+    fractal : ^Fractal_State,
     gpu_device : ^sdl.GPUDevice,
     window_width, window_height : ^u32,
     gpu_texture : ^^sdl.GPUTexture,
@@ -140,7 +142,7 @@ handle_resize :: proc(
 
 @(private = "file")
 handle_fractal_keyboard_input :: proc(
-    uniform : ^FractalUniform,
+    uniform : ^Fractal_Uniform,
     zoom_level : ^f32,
     keycode : sdl.Keycode,
 ) {
@@ -165,7 +167,7 @@ handle_fractal_keyboard_input :: proc(
 
 @(private = "file")
 handle_fractal_zoom :: proc(
-    fractal : ^FractalState,
+    fractal : ^Fractal_State,
     event : ^sdl.Event,
     window_width, window_height : u32,
 ) {
@@ -197,7 +199,7 @@ handle_fractal_zoom :: proc(
 
 @(private = "file")
 handle_fractal_drag :: proc(
-    fractal : ^FractalState,
+    fractal : ^Fractal_State,
     event : ^sdl.Event,
     is_hover_active : bool,
     window_height : u32,
@@ -217,7 +219,7 @@ handle_fractal_drag :: proc(
 
 @(private = "file")
 start_fractal_drag :: proc(
-    fractal : ^FractalState,
+    fractal : ^Fractal_State,
     is_hover_active : bool,
 ) -> sdl.AppResult {
     if is_hover_active {
@@ -234,7 +236,7 @@ start_fractal_drag :: proc(
 }
 
 @(private = "file")
-end_fractal_drag :: proc(fractal : ^FractalState) -> sdl.AppResult {
+end_fractal_drag :: proc(fractal : ^Fractal_State) -> sdl.AppResult {
     fractal.is_dragging = false
     ok := sdl.SetCursor(fractal.default_cursor)
     if !ok {

@@ -64,7 +64,7 @@ sdl_ui_key_map := map[sdl.Keycode]mu.Key {
     sdl.K_V         = .V,
 }
 
-palette_presets := [?]PalettePreset {
+palette_presets := [?]Palette_Preset {
     {
         name = "Electric",
         a = {0.5, 0.5, 0.5},

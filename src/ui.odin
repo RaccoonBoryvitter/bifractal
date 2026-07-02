@@ -109,7 +109,7 @@ create_sidebar_layout :: proc(width, height : u32) -> mu.Rect {
     return mu.Rect{i32(width) - panel_w - margin, margin, panel_w, panel_h}
 }
 
-create_ui :: proc(state : ^AppState) {
+create_ui :: proc(state : ^App_State) {
     context = state.ctx
     defer free_all(context.temp_allocator)
 
@@ -309,10 +309,10 @@ create_ui :: proc(state : ^AppState) {
     }
 }
 
-handle_mu_commands :: proc(state : ^AppState) -> int {
+handle_mu_commands :: proc(state : ^App_State) -> int {
     vertex_count := 0
 
-    vertices_ptr := (^UIVertex)(
+    vertices_ptr := (^Ui_Vertex)(
         sdl.MapGPUTransferBuffer(
             state.gpu.device,
             state.gpu.ui_transfer_buffer,
@@ -324,7 +324,7 @@ handle_mu_commands :: proc(state : ^AppState) -> int {
         state.gpu.ui_transfer_buffer,
     )
 
-    vertices := ([^]UIVertex)(vertices_ptr)[:MAX_UI_VERTICES]
+    vertices := ([^]Ui_Vertex)(vertices_ptr)[:MAX_UI_VERTICES]
     cmd_iter : ^mu.Command
 
     for mu.next_command(&state.ui_context, &cmd_iter) {
@@ -369,7 +369,7 @@ handle_mu_commands :: proc(state : ^AppState) -> int {
 }
 
 push_rect :: proc(
-    vertices : ^[]UIVertex,
+    vertices : ^[]Ui_Vertex,
     count : ^int,
     rect, uv : mu.Rect,
     color : mu.Color,
@@ -397,7 +397,7 @@ push_rect :: proc(
 }
 
 push_rect_uv :: proc(
-    vertices : ^[]UIVertex,
+    vertices : ^[]Ui_Vertex,
     count : ^int,
     rect, src : mu.Rect,
     color : mu.Color,
@@ -443,8 +443,8 @@ palette_row :: proc(ui : ^mu.Context, label : string, color : ^[3]f32) {
 
 // State/pipeline management
 
-init_ui_pipeline :: proc(state : ^AppState) -> bool {
-    ui_vertex_shader := create_gpu_shader(
+init_ui_pipeline :: proc(state : ^App_State) -> bool {
+    ui_vertex_shader := create_shader(
         state.gpu.device,
         "ui.vert",
         .VERTEX,
@@ -454,7 +454,7 @@ init_ui_pipeline :: proc(state : ^AppState) -> bool {
         return false
     }
 
-    ui_fragment_shader := create_gpu_shader(
+    ui_fragment_shader := create_shader(
         state.gpu.device,
         "ui.frag",
         .FRAGMENT,
@@ -465,7 +465,7 @@ init_ui_pipeline :: proc(state : ^AppState) -> bool {
     }
 
     ui_vertex_buffer_descs := [1]sdl.GPUVertexBufferDescription {
-        {slot = 0, pitch = size_of(UIVertex), input_rate = .VERTEX},
+        {slot = 0, pitch = size_of(Ui_Vertex), input_rate = .VERTEX},
     }
 
     ui_vertex_attrs := [3]sdl.GPUVertexAttribute {
@@ -529,18 +529,18 @@ init_ui_pipeline :: proc(state : ^AppState) -> bool {
     return true
 }
 
-init_ui_resources :: proc(state : ^AppState) {
+init_ui_resources :: proc(state : ^App_State) {
     state.gpu.ui_vertex_buffer = sdl.CreateGPUBuffer(
         state.gpu.device,
         sdl.GPUBufferCreateInfo {
-            size = size_of(UIVertex) * MAX_UI_VERTICES,
+            size = size_of(Ui_Vertex) * MAX_UI_VERTICES,
             usage = {.VERTEX},
         },
     )
     state.gpu.ui_transfer_buffer = sdl.CreateGPUTransferBuffer(
         state.gpu.device,
         sdl.GPUTransferBufferCreateInfo {
-            size = size_of(UIVertex) * MAX_UI_VERTICES,
+            size = size_of(Ui_Vertex) * MAX_UI_VERTICES,
             usage = .UPLOAD,
         },
     )
@@ -558,7 +558,7 @@ init_ui_resources :: proc(state : ^AppState) {
 
 // Input management
 
-handle_ui_events :: proc(event : ^sdl.Event, state : ^AppState) {
+handle_ui_events :: proc(event : ^sdl.Event, state : ^App_State) {
     #partial switch event.type {
         case .MOUSE_MOTION:
             mu.input_mouse_move(
@@ -616,7 +616,7 @@ handle_ui_events :: proc(event : ^sdl.Event, state : ^AppState) {
 }
 
 @(private = "file")
-on_microui_text_input :: proc(event : ^sdl.Event, state : ^AppState) {
+on_microui_text_input :: proc(event : ^sdl.Event, state : ^App_State) {
     c_text := event.text.text
     if c_text == nil {
         return

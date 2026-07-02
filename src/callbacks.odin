@@ -30,7 +30,7 @@ SDL_AppEvent :: proc "c" (
     appstate : rawptr,
     event : ^sdl.Event,
 ) -> sdl.AppResult {
-    state := (^AppState)(appstate)
+    state := (^App_State)(appstate)
     context = state.ctx
 
     handle_ui_events(event, state)
@@ -60,13 +60,14 @@ SDL_AppEvent :: proc "c" (
     return .CONTINUE
 }
 
-fps_update :: proc(state : ^AppState) {
+fps_update :: proc(state : ^App_State) {
     state.fps_frame_count += 1
     now := sdl.GetTicks()
     elapsed := now - state.fps_last_ticks
 
     if elapsed >= FPS_INTERVAL_MS {
-        state.fps_current = f32(state.fps_frame_count) / (f32(elapsed) / 1000.0)
+        state.fps_current =
+            f32(state.fps_frame_count) / (f32(elapsed) / 1000.0)
         state.fps_frame_count = 0
         state.fps_last_ticks = now
     }
@@ -74,7 +75,7 @@ fps_update :: proc(state : ^AppState) {
 
 @(export)
 SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
-    state := (^AppState)(appstate)
+    state := (^App_State)(appstate)
     context = state.ctx
     defer free_all(context.temp_allocator)
 
@@ -87,7 +88,7 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
 
 @(export)
 SDL_AppQuit :: proc "c" (appstate : rawptr, result : sdl.AppResult) {
-    state := (^AppState)(appstate)
+    state := (^App_State)(appstate)
     context = state.ctx
 
     sdl.DestroyCursor(state.fractal.move_cursor)
