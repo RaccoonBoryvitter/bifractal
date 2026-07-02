@@ -35,8 +35,24 @@ SDL_AppEvent :: proc "c" (
 
     handle_ui_events(event, state)
 
+    if event.type == .KEY_DOWN && event.key.key == sdl.K_F11 {
+        window_flags := sdl.GetWindowFlags(state.window)
+        is_fullscreen := .FULLSCREEN in window_flags
+        sdl.SetWindowFullscreen(state.window, !is_fullscreen)
+        return .CONTINUE
+    }
+
     // Fractal input handling
-    fractal_result := handle_fractal_events(event, state)
+    is_hover_active := state.ui_context.hover_root != nil
+    fractal_result := handle_fractal_events(
+        event,
+        &state.fractal,
+        state.gpu.device,
+        &state.window_width,
+        &state.window_height,
+        &state.gpu.texture,
+        is_hover_active,
+    )
     if fractal_result != .CONTINUE {
         return fractal_result
     }

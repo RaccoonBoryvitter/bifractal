@@ -65,11 +65,14 @@ init_app :: proc(ctx : runtime.Context) -> ^AppState {
         return nil
     }
 
-    if !init_fractal_compute(state) {
+    pipeline, texture, ok := init_fractal_compute(state.gpu.device, state.window_width, state.window_height)
+    if !ok {
         return nil
     }
+    state.gpu.compute_pipeline = pipeline
+    state.gpu.texture = texture
 
-    state.fractal = init_fractal_state(state)
+    state.fractal = init_fractal_state(state.window_width, state.window_height)
 
     if !init_ui_pipeline(state) {
         return nil
