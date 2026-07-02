@@ -425,7 +425,7 @@ push_rect_uv :: proc(
     count^ += 6
 }
 
-palette_row :: proc(ui : ^mu.Context, label : string, color : ^[3]f32) {
+palette_row :: proc(ui : ^mu.Context, label : string, color : ^[4]f32) {
     mu.layout_row(ui, {-1}, 0)
     mu.label(ui, label)
 

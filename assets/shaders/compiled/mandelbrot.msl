@@ -8,14 +8,10 @@ struct type_UniformBlock
     float2 center;
     float zoom;
     int max_iter;
-    packed_float3 palette_a;
-    float _pad_a;
-    packed_float3 palette_b;
-    float _pad_b;
-    packed_float3 palette_c;
-    float _pad_c;
-    packed_float3 palette_d;
-    float _pad_d;
+    float4 palette_a;
+    float4 palette_b;
+    float4 palette_c;
+    float4 palette_d;
     float2 resolution;
 };
 
@@ -23,44 +19,44 @@ kernel void main0(constant type_UniformBlock& UniformBlock [[buffer(0)]], textur
 {
     do
     {
-        int2 _51 = int2(gl_GlobalInvocationID.xy);
-        bool _65;
-        if (_51.x < int(UniformBlock.resolution.x))
+        int2 _50 = int2(gl_GlobalInvocationID.xy);
+        bool _64;
+        if (_50.x < int(UniformBlock.resolution.x))
         {
-            _65 = _51.y >= int(UniformBlock.resolution.y);
+            _64 = _50.y >= int(UniformBlock.resolution.y);
         }
         else
         {
-            _65 = true;
+            _64 = true;
         }
-        if (_65)
+        if (_64)
         {
             break;
         }
-        float2 _81 = ((float2(_51) - (UniformBlock.resolution * 0.5)) / float2(UniformBlock.resolution.y * UniformBlock.zoom)) + UniformBlock.center;
-        float2 _83;
-        int _86;
-        _83 = float2(0.0);
-        _86 = 0;
-        int _91;
-        bool _92;
+        float2 _80 = ((float2(_50) - (UniformBlock.resolution * 0.5)) / float2(UniformBlock.resolution.y * UniformBlock.zoom)) + UniformBlock.center;
+        float2 _82;
+        int _85;
+        _82 = float2(0.0);
+        _85 = 0;
+        int _90;
+        bool _91;
         for (;;)
         {
-            _91 = UniformBlock.max_iter;
-            _92 = _86 < _91;
-            bool _97;
-            if (_92)
+            _90 = UniformBlock.max_iter;
+            _91 = _85 < _90;
+            bool _96;
+            if (_91)
             {
-                _97 = dot(_83, _83) < 4.0;
+                _96 = dot(_82, _82) < 4.0;
             }
             else
             {
-                _97 = false;
+                _96 = false;
             }
-            if (_97)
+            if (_96)
             {
-                _83 = float2(((_83.x * _83.x) - (_83.y * _83.y)) + _81.x, ((2.0 * _83.x) * _83.y) + _81.y);
-                _86++;
+                _82 = float2(((_82.x * _82.x) - (_82.y * _82.y)) + _80.x, ((2.0 * _82.x) * _82.y) + _80.y);
+                _85++;
                 continue;
             }
             else
@@ -68,16 +64,16 @@ kernel void main0(constant type_UniformBlock& UniformBlock [[buffer(0)]], textur
                 break;
             }
         }
-        float3 _133;
-        if (_92)
+        float4 _132;
+        if (_91)
         {
-            _133 = float3(UniformBlock.palette_a) + (float3(UniformBlock.palette_b) * cos(((float3(UniformBlock.palette_c) * (((float(_86) - log2(log2(dot(_83, _83)))) + 4.0) / float(_91))) + float3(UniformBlock.palette_d)) * 6.28318023681640625));
+            _132 = UniformBlock.palette_a + (UniformBlock.palette_b * cos(((UniformBlock.palette_c * (((float(_85) - log2(log2(dot(_82, _82)))) + 4.0) / float(_90))) + UniformBlock.palette_d) * 6.28318023681640625));
         }
         else
         {
-            _133 = float3(0.0);
+            _132 = float4(0.0, 0.0, 0.0, 1.0);
         }
-        output_image.write(float4(_133, 1.0), uint2(gl_GlobalInvocationID.xy));
+        output_image.write(float4(_132.xyz, 1.0), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

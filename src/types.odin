@@ -20,14 +20,10 @@ Fractal_Uniform :: struct {
     center :     [2]f32,
     zoom :       f32,
     max_iter :   i32,
-    palette_a :  [3]f32,
-    _pad_a :     f32,
-    palette_b :  [3]f32,
-    _pad_b :     f32,
-    palette_c :  [3]f32,
-    _pad_c :     f32,
-    palette_d :  [3]f32,
-    _pad_d :     f32,
+    palette_a :  [4]f32,
+    palette_b :  [4]f32,
+    palette_c :  [4]f32,
+    palette_d :  [4]f32,
     resolution : [2]f32,
 }
 
@@ -41,10 +37,10 @@ Fractal_State :: struct {
 
 Palette_Preset :: struct {
     name : string,
-    a :    [3]f32,
-    b :    [3]f32,
-    c :    [3]f32,
-    d :    [3]f32,
+    a :    [4]f32,
+    b :    [4]f32,
+    c :    [4]f32,
+    d :    [4]f32,
 }
 
 Ui_Vertex :: struct {

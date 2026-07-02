@@ -5,17 +5,17 @@ cbuffer UniformBlock : register(b0, space2) {
     float  zoom;
     int    max_iter;
 
-    float3 palette_a; float _pad_a;
-    float3 palette_b; float _pad_b;
-    float3 palette_c; float _pad_c;
-    float3 palette_d; float _pad_d;
+    float4 palette_a;
+    float4 palette_b;
+    float4 palette_c;
+    float4 palette_d;
 
     float2 resolution;
 };
-
+    
 static const float TWO_PI = 6.28318;
 
-float3 cosine_palette(float t) {
+float4 cosine_palette(float t) {
     return palette_a + palette_b * cos(TWO_PI * (palette_c * t + palette_d));
 }
 
@@ -33,12 +33,12 @@ void main(uint3 global_id : SV_DispatchThreadID) {
         iter++;
     }
 
-    float3 color = float3(0.0, 0.0, 0.0);
+    float4 color = float4(0.0, 0.0, 0.0, 1.0);
     if (iter < max_iter) {
         float smooth_iter = float(iter) - log2(log2(dot(z, z))) + 4.0;
         float t = smooth_iter / float(max_iter);
         color = cosine_palette(t);
     }
 
-    output_image[pixel] = float4(color, 1.0);
+    output_image[pixel] = float4(color.xyz, 1.0);
 }
