@@ -17,16 +17,6 @@ import sdl "vendor:sdl3"
 @(private = "file")
 RGBA8 :: distinct [4]u8
 
-UIVertex :: struct {
-    position : [2]f32,
-    uv :       [2]f32,
-    color :    [4]f32,
-}
-
-UIGlobals :: struct {
-    screen_size : [2]f32,
-}
-
 UiLayout :: struct {
     navigation : mu.Rect,
     palette :    mu.Rect,
@@ -129,11 +119,7 @@ create_ui :: proc(state : ^AppState) {
 
     layout := create_sidebar_layout(state.window_width, state.window_height)
 
-    root_window := mu.begin_window(
-        ui_ctx,
-        "Sidebar",
-        layout,
-        {.EXPANDED})
+    root_window := mu.begin_window(ui_ctx, "Sidebar", layout, {.EXPANDED})
     defer mu.end_window(ui_ctx)
     if !root_window {
         return
@@ -248,7 +234,7 @@ create_ui :: proc(state : ^AppState) {
         if .ACTIVE in presets_header {
             button_w := available - PALETTE_SWATCH_WIDTH - spacing
 
-            for preset in PALETTE_PRESETS {
+            for preset in palette_presets {
                 mu.layout_row(ui_ctx, {button_w, PALETTE_SWATCH_WIDTH}, 0)
 
                 preset_button := mu.button(ui_ctx, preset.name)
@@ -297,7 +283,10 @@ create_ui :: proc(state : ^AppState) {
         mu.label(ui_ctx, fmt.tprintf("{:.1f}", state.fps_current))
 
         mu.label(ui_ctx, "Frame time:")
-        mu.label(ui_ctx, fmt.tprintf("%.2f ms", 1000.0 / max(state.fps_current, 0.001)))
+        mu.label(
+            ui_ctx,
+            fmt.tprintf("%.2f ms", 1000.0 / max(state.fps_current, 0.001)),
+        )
 
         mu.label(ui_ctx, "GPU:")
         gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)
@@ -320,10 +309,7 @@ create_ui :: proc(state : ^AppState) {
     }
 }
 
-handle_mu_commands :: proc(
-    state : ^AppState
-) -> int
-{
+handle_mu_commands :: proc(state : ^AppState) -> int {
     vertex_count := 0
 
     vertices_ptr := (^UIVertex)(
@@ -333,7 +319,10 @@ handle_mu_commands :: proc(
             false,
         ),
     )
-    defer sdl.UnmapGPUTransferBuffer(state.gpu.device, state.gpu.ui_transfer_buffer)
+    defer sdl.UnmapGPUTransferBuffer(
+        state.gpu.device,
+        state.gpu.ui_transfer_buffer,
+    )
 
     vertices := ([^]UIVertex)(vertices_ptr)[:MAX_UI_VERTICES]
     cmd_iter : ^mu.Command
@@ -609,7 +598,7 @@ handle_ui_events :: proc(event : ^sdl.Event, state : ^AppState) {
                 }
         case .TEXT_INPUT: on_microui_text_input(event, state)
         case .KEY_DOWN, .KEY_UP:
-            k, ok := KEY_MAP[event.key.key]
+            k, ok := sdl_ui_key_map[event.key.key]
             if !ok {
                 break
             }

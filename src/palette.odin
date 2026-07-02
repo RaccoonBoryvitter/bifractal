@@ -2,16 +2,6 @@ package main
 
 import "core:math"
 
-// Types
-
-PalettePreset :: struct {
-    name : string,
-    a :    [3]f32,
-    b :    [3]f32,
-    c :    [3]f32,
-    d :    [3]f32,
-}
-
 // Functions
 
 apply_palette_preset :: proc(

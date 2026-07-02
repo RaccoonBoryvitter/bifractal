@@ -42,7 +42,7 @@ PALETTE_PRESET_SWATCH_STEPS :: 16
 PALETTE_SWATCH_WIDTH :: 64
 
 // SDL3+microui keyboard mappings
-KEY_MAP := map[sdl.Keycode]mu.Key {
+sdl_ui_key_map := map[sdl.Keycode]mu.Key {
     sdl.K_LSHIFT    = .SHIFT,
     sdl.K_RSHIFT    = .SHIFT,
     sdl.K_LCTRL     = .CTRL,
@@ -64,7 +64,7 @@ KEY_MAP := map[sdl.Keycode]mu.Key {
     sdl.K_V         = .V,
 }
 
-PALETTE_PRESETS := [?]PalettePreset {
+palette_presets := [?]PalettePreset {
     {
         name = "Electric",
         a = {0.5, 0.5, 0.5},
