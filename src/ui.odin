@@ -3,6 +3,7 @@ package main
 
 import intr "base:intrinsics"
 import "core:math"
+import "core:math/rand"
 import "core:strings"
 import "core:unicode"
 import "core:unicode/utf8"
@@ -207,36 +208,87 @@ create_ui :: proc(state: ^App_State) {
 
         mu.layout_row(ui_ctx, {-1}, 0)
         mu.label(ui_ctx, "Gradient Preview")
+        mu.checkbox(ui_ctx, "Banded", &state.palette_banded)
 
         mu.layout_row(ui_ctx, {-1}, 40)
         swatch_rect := mu.layout_next(ui_ctx)
-        step_w := f32(swatch_rect.w) / f32(PALETTE_SWATCH_STEPS)
 
-        for i in 0 ..< PALETTE_SWATCH_STEPS {
-            t := f32(i) / f32(PALETTE_SWATCH_STEPS - 1)
-            color := cosine_palette_cpu(
-                t,
-                state.fractal.uniform.palette_a,
-                state.fractal.uniform.palette_b,
-                state.fractal.uniform.palette_c,
-                state.fractal.uniform.palette_d,
+        if state.palette_banded {
+            bands := clamp(
+                state.fractal.uniform.max_iter,
+                FRACTAL_MIN_ITERATIONS,
+                PALETTE_SWATCH_STEPS,
             )
-            slice := mu.Rect {
-                x = swatch_rect.x + i32(f32(i) * step_w),
-                y = swatch_rect.y,
-                w = i32(math.ceil(step_w)) + 1,
-                h = swatch_rect.h,
+            step_w := f32(swatch_rect.w) / f32(bands)
+            for i in 0 ..< bands {
+                t := f32(i) / f32(bands)
+                color := cosine_palette_cpu(
+                    t,
+                    state.fractal.uniform.palette_a,
+                    state.fractal.uniform.palette_b,
+                    state.fractal.uniform.palette_c,
+                    state.fractal.uniform.palette_d,
+                )
+                slice := mu.Rect {
+                    x = swatch_rect.x + i32(f32(i) * step_w),
+                    y = swatch_rect.y,
+                    w = i32(math.ceil(step_w)) + 1,
+                    h = swatch_rect.h,
+                }
+                mu.draw_rect(
+                    ui_ctx,
+                    slice,
+                    mu.Color {
+                        r = u8(math.clamp(color.r, 0, 1) * 255),
+                        g = u8(math.clamp(color.g, 0, 1) * 255),
+                        b = u8(math.clamp(color.b, 0, 1) * 255),
+                        a = 255,
+                    },
+                )
             }
-            mu.draw_rect(
-                ui_ctx,
-                slice,
-                mu.Color {
-                    r = u8(math.clamp(color.r, 0, 1) * 255),
-                    g = u8(math.clamp(color.g, 0, 1) * 255),
-                    b = u8(math.clamp(color.b, 0, 1) * 255),
-                    a = 255,
-                },
+        }
+         else {
+            step_w := f32(swatch_rect.w) / f32(PALETTE_SWATCH_STEPS)
+            for i in 0 ..< PALETTE_SWATCH_STEPS {
+                t := f32(i) / f32(PALETTE_SWATCH_STEPS - 1)
+                color := cosine_palette_cpu(
+                    t,
+                    state.fractal.uniform.palette_a,
+                    state.fractal.uniform.palette_b,
+                    state.fractal.uniform.palette_c,
+                    state.fractal.uniform.palette_d,
+                )
+                slice := mu.Rect {
+                    x = swatch_rect.x + i32(f32(i) * step_w),
+                    y = swatch_rect.y,
+                    w = i32(math.ceil(step_w)) + 1,
+                    h = swatch_rect.h,
+                }
+                mu.draw_rect(
+                    ui_ctx,
+                    slice,
+                    mu.Color {
+                        r = u8(math.clamp(color.r, 0, 1) * 255),
+                        g = u8(math.clamp(color.g, 0, 1) * 255),
+                        b = u8(math.clamp(color.b, 0, 1) * 255),
+                        a = 255,
+                    },
+                )
+            }
+        }
+
+        mu.layout_row(ui_ctx, {-1}, 0)
+        if .SUBMIT in mu.button(ui_ctx, "Mirror") {
+            mirror_palette(&state.fractal.uniform)
+        }
+        if .SUBMIT in mu.button(ui_ctx, "Randomize") {
+            randomize_palette(
+                &state.fractal.uniform,
+                rand.default_random_generator(&state.rand_state),
             )
+        }
+        if .SUBMIT in mu.button(ui_ctx, "Rotate") {
+            rotate_palette(&state.fractal.uniform, 0.05)
         }
 
         palette_row(ui_ctx, "a:", &state.fractal.uniform.palette_a)

@@ -2,6 +2,7 @@ package main
 
 import "base:runtime"
 import "core:log"
+import "core:math/rand"
 
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
@@ -113,6 +114,8 @@ init_app :: proc(ctx: runtime.Context) -> ^App_State {
         ui_texture_size +
         ui_buffer_size + // vertex buffer
         ui_buffer_size // transfer buffer
+
+    state.rand_state = rand.create_u64(42)
 
     state.fps_last_ticks = sdl.GetTicks()
 

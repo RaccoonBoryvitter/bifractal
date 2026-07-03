@@ -2,6 +2,8 @@ package main
 
 import "base:runtime"
 
+import "core:math/rand"
+
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
@@ -58,17 +60,21 @@ Resolution :: struct {
 }
 
 App_State :: struct {
-    ctx:               runtime.Context,
-    window:            ^sdl.Window,
-    window_resolution: Resolution,
-    gpu:               Gpu_Resources,
-    gpu_name:          string,
-    gpu_driver:        string,
-    mouse_complex:     complex64,
-    fractal:           Fractal_State,
-    ui_context:        mu.Context,
-    fps_frame_count:   u32,
-    fps_last_ticks:    u64,
-    fps_current:       f32,
-    gpu_vram_bytes:    u64,
+    ctx:                  runtime.Context,
+    window:               ^sdl.Window,
+    window_resolution:    Resolution,
+    gpu:                  Gpu_Resources,
+    gpu_name:             string,
+    gpu_driver:           string,
+    mouse_complex:        complex64,
+    fractal:              Fractal_State,
+    ui_context:           mu.Context,
+    palette_banded:       bool,
+    palette_snapshot:     Palette_Preset,
+    palette_has_snapshot: bool,
+    rand_state:           rand.Default_Random_State,
+    fps_frame_count:      u32,
+    fps_last_ticks:       u64,
+    fps_current:          f32,
+    gpu_vram_bytes:       u64,
 }
