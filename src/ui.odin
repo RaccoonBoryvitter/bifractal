@@ -317,6 +317,15 @@ create_ui :: proc(state: ^App_State) {
                 state.window_resolution.h,
             ),
         )
+
+        mu.label(ui_ctx, "GPU VRAM:")
+        mu.label(
+            ui_ctx,
+            fmt.tprintf(
+                "{:.2f} MB",
+                f64(state.gpu_vram_bytes) / (1024.0 * 1024.0),
+            ),
+        )
     }
 }
 

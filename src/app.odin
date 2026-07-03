@@ -3,6 +3,7 @@ package main
 import "base:runtime"
 import "core:log"
 
+import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
 init_window :: proc() -> ^sdl.Window {
@@ -92,6 +93,26 @@ init_app :: proc(ctx: runtime.Context) -> ^App_State {
     }
 
     init_ui_resources(state)
+
+    compute_texel_size: u64 = 16
+    compute_texture_size :=
+        u64(state.window_resolution.w) *
+        u64(state.window_resolution.h) *
+        compute_texel_size
+
+    ui_texel_size: u64 = 4
+    ui_texture_size :=
+        u64(mu.DEFAULT_ATLAS_WIDTH) *
+        u64(mu.DEFAULT_ATLAS_HEIGHT) *
+        ui_texel_size
+
+    ui_buffer_size := u64(MAX_UI_VERTICES) * u64(size_of(Ui_Vertex))
+
+    state.gpu_vram_bytes =
+        compute_texture_size +
+        ui_texture_size +
+        ui_buffer_size + // vertex buffer
+        ui_buffer_size // transfer buffer
 
     state.fps_last_ticks = sdl.GetTicks()
 
