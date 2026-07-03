@@ -65,6 +65,16 @@ init_app :: proc(ctx: runtime.Context) -> ^App_State {
         return nil
     }
 
+    gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)
+    state.gpu_name = string(
+        sdl.GetStringProperty(
+            gpu_props,
+            sdl.PROP_GPU_DEVICE_NAME_STRING,
+            "Unknown",
+        ),
+    )
+    state.gpu_driver = string(sdl.GetGPUDeviceDriver(state.gpu.device))
+
     pipeline, texture, ok := init_fractal_compute(
         state.gpu.device,
         state.window_resolution,

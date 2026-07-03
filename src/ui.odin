@@ -152,13 +152,20 @@ create_ui :: proc(state: ^App_State) {
 
         if ui_ctx.hover_root != nil {
             mu.label(ui_ctx, "Mouse:")
-            mu.label(ui_ctx, "--")
+            mu.label(
+                ui_ctx,
+                fmt.tprintf(
+                    "{:+.6f} {:+.6f}i",
+                    real(state.mouse_complex),
+                    imag(state.mouse_complex),
+                ),
+            )
         }
          else {
             mouse_x, mouse_y: f32
             _ = sdl.GetMouseState(&mouse_x, &mouse_y)
 
-            complex_coords := screen_to_complex(
+            state.mouse_complex = screen_to_complex(
                 mouse_x,
                 mouse_y,
                 state.window_resolution,
@@ -171,8 +178,8 @@ create_ui :: proc(state: ^App_State) {
                 ui_ctx,
                 fmt.tprintf(
                     "{:+.6f} {:+.6f}i",
-                    real(complex_coords),
-                    imag(complex_coords),
+                    real(state.mouse_complex),
+                    imag(state.mouse_complex),
                 ),
             )
         }
@@ -180,7 +187,9 @@ create_ui :: proc(state: ^App_State) {
         mu.label(ui_ctx, "Iterations:")
         max_iter_float := f32(state.fractal.uniform.max_iter)
         mu.slider(ui_ctx, &max_iter_float, 8, 1024, 1)
-        state.fractal.uniform.max_iter = i32(max_iter_float)
+        if i32(max_iter_float) != state.fractal.uniform.max_iter {
+            state.fractal.uniform.max_iter = i32(max_iter_float)
+        }
 
         reset_button := mu.button(ui_ctx, "Reset View")
         if .SUBMIT in reset_button {
@@ -294,17 +303,10 @@ create_ui :: proc(state: ^App_State) {
         )
 
         mu.label(ui_ctx, "GPU:")
-        gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)
-        gpu_name := sdl.GetStringProperty(
-            gpu_props,
-            sdl.PROP_GPU_DEVICE_NAME_STRING,
-            "Unknown",
-        )
-        mu.label(ui_ctx, string(gpu_name))
+        mu.label(ui_ctx, state.gpu_name)
 
         mu.label(ui_ctx, "Graphics API:")
-        driver := sdl.GetGPUDeviceDriver(state.gpu.device)
-        mu.label(ui_ctx, string(driver))
+        mu.label(ui_ctx, state.gpu_driver)
 
         mu.label(ui_ctx, "Resolution:")
         mu.label(

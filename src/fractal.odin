@@ -180,6 +180,7 @@ handle_fractal_zoom :: proc(
     }
 
     fractal.zoom_level += event.wheel.y * FRACTAL_ZOOM_SCROLL_FACTOR
+    fractal.zoom_level = max(fractal.zoom_level, FRACTAL_MIN_ZOOM_LOG)
     fractal.uniform.zoom = math.exp(fractal.zoom_level)
 
     new_mouse_complex := [2]f32 {
