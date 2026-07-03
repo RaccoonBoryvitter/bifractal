@@ -102,15 +102,15 @@ create_compute_pipeline :: proc(
 
 create_output_texture :: proc(
     device : ^sdl.GPUDevice,
-    width, height : u32,
+    resolution : Resolution,
 ) -> ^sdl.GPUTexture {
     return sdl.CreateGPUTexture(
         device,
         sdl.GPUTextureCreateInfo {
             type = .D2,
             format = .R32G32B32A32_FLOAT,
-            width = width,
-            height = height,
+            width = resolution.w,
+            height = resolution.h,
             layer_count_or_depth = 1,
             num_levels = 1,
             usage = {.COMPUTE_STORAGE_WRITE, .SAMPLER, .COMPUTE_STORAGE_READ},

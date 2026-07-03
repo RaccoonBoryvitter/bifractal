@@ -48,8 +48,7 @@ SDL_AppEvent :: proc "c" (
         event,
         &state.fractal,
         state.gpu.device,
-        &state.window_width,
-        &state.window_height,
+        &state.window_resolution,
         &state.gpu.texture,
         is_hover_active,
     )

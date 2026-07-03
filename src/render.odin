@@ -26,8 +26,8 @@ render_frame :: proc(state : ^App_State, vertex_count : int) -> sdl.AppResult {
     )
     sdl.DispatchGPUCompute(
         compute_pass,
-        (state.window_width + 7) / 8,
-        (state.window_height + 7) / 8,
+        (state.window_resolution.w + 7) / 8,
+        (state.window_resolution.h + 7) / 8,
         1,
     )
     sdl.EndGPUComputePass(compute_pass)
@@ -79,8 +79,8 @@ render_frame :: proc(state : ^App_State, vertex_count : int) -> sdl.AppResult {
         sdl.GPUBlitInfo {
             source = {
                 texture = state.gpu.texture,
-                w = state.window_width,
-                h = state.window_height,
+                w = state.window_resolution.w,
+                h = state.window_resolution.h,
                 mip_level = 0,
                 layer_or_depth_plane = 0,
                 x = 0,

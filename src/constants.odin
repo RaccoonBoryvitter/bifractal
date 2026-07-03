@@ -6,8 +6,7 @@ import sdl "vendor:sdl3"
 
 // Window configuration
 WINDOW_TITLE :: "Odin Zoom"
-WINDOW_WIDTH :: 1280
-WINDOW_HEIGHT :: 720
+WINDOW_RESOLUTION :: Resolution{w = 1280, h = 720}
 
 // Shader paths
 MANDELBROT_SHADER_PATH :: "../assets/shaders/compiled/mandelbrot.spv"

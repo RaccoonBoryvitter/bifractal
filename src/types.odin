@@ -53,15 +53,18 @@ Ui_Globals :: struct {
     screen_size : [2]f32,
 }
 
+Resolution :: struct {
+    w, h : u32,
+}
+
 App_State :: struct {
-    ctx :             runtime.Context,
-    window :          ^sdl.Window,
-    window_width :    u32,
-    window_height :   u32,
-    gpu :             Gpu_Resources,
-    fractal :         Fractal_State,
-    ui_context :      mu.Context,
-    fps_frame_count : u32,
-    fps_last_ticks :  u64,
-    fps_current :     f32,
+    ctx :               runtime.Context,
+    window :            ^sdl.Window,
+    window_resolution : Resolution,
+    gpu :               Gpu_Resources,
+    fractal :           Fractal_State,
+    ui_context :        mu.Context,
+    fps_frame_count :   u32,
+    fps_last_ticks :    u64,
+    fps_current :       f32,
 }

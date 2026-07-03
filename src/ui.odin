@@ -17,6 +17,7 @@ import sdl "vendor:sdl3"
 @(private = "file")
 RGBA8 :: distinct [4]u8
 
+@(private = "file")
 UiLayout :: struct {
     navigation : mu.Rect,
     palette :    mu.Rect,
@@ -101,12 +102,12 @@ available_width :: proc(ctx : ^mu.Context) -> i32 {
     return container.body.w - ctx.style.padding * 2
 }
 
-create_sidebar_layout :: proc(width, height : u32) -> mu.Rect {
+create_sidebar_layout :: proc(resolution : Resolution) -> mu.Rect {
     margin : i32 = 10
-    panel_w := clamp(i32(f32(width) * 0.22), 280, 420)
-    panel_h := i32(height) - margin * 2
+    panel_w := clamp(i32(f32(resolution.w) * 0.22), 280, 420)
+    panel_h := i32(resolution.h) - margin * 2
 
-    return mu.Rect{i32(width) - panel_w - margin, margin, panel_w, panel_h}
+    return mu.Rect{i32(resolution.w) - panel_w - margin, margin, panel_w, panel_h}
 }
 
 create_ui :: proc(state : ^App_State) {
@@ -117,7 +118,7 @@ create_ui :: proc(state : ^App_State) {
     mu.begin(ui_ctx)
     defer mu.end(ui_ctx)
 
-    layout := create_sidebar_layout(state.window_width, state.window_height)
+    layout := create_sidebar_layout(state.window_resolution)
 
     root_window := mu.begin_window(ui_ctx, "Sidebar", layout, {.EXPANDED})
     defer mu.end_window(ui_ctx)
@@ -155,8 +156,7 @@ create_ui :: proc(state : ^App_State) {
             complex_coords := screen_to_complex(
                 mouse_x,
                 mouse_y,
-                state.window_width,
-                state.window_height,
+                state.window_resolution,
                 state.fractal.uniform.center,
                 state.fractal.uniform.zoom,
             )
@@ -304,7 +304,7 @@ create_ui :: proc(state : ^App_State) {
         mu.label(ui_ctx, "Resolution:")
         mu.label(
             ui_ctx,
-            fmt.tprintf("{:d}x{:d}", state.window_width, state.window_height),
+            fmt.tprintf("{:d}x{:d}", state.window_resolution.w, state.window_resolution.h),
         )
     }
 }

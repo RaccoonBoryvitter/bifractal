@@ -14,8 +14,8 @@ init_window :: proc() -> ^sdl.Window {
 
     window := sdl.CreateWindow(
         WINDOW_TITLE,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT,
+        i32(WINDOW_RESOLUTION.w),
+        i32(WINDOW_RESOLUTION.h),
         {.RESIZABLE, .HIGH_PIXEL_DENSITY},
     )
     if window == nil {
@@ -56,8 +56,8 @@ init_app :: proc(ctx : runtime.Context) -> ^App_State {
 
     sdl.GetWindowSizeInPixels(
         state.window,
-        (^i32)(&state.window_width),
-        (^i32)(&state.window_height),
+        (^i32)(&state.window_resolution.w),
+        (^i32)(&state.window_resolution.h),
     )
 
     state.gpu.device = init_gpu(state.window)
@@ -67,8 +67,7 @@ init_app :: proc(ctx : runtime.Context) -> ^App_State {
 
     pipeline, texture, ok := init_fractal_compute(
         state.gpu.device,
-        state.window_width,
-        state.window_height,
+        state.window_resolution,
     )
     if !ok {
         return nil
@@ -76,7 +75,7 @@ init_app :: proc(ctx : runtime.Context) -> ^App_State {
     state.gpu.compute_pipeline = pipeline
     state.gpu.texture = texture
 
-    state.fractal = init_fractal_state(state.window_width, state.window_height)
+    state.fractal = init_fractal_state(state.window_resolution)
 
     if !init_ui_pipeline(state) {
         return nil
