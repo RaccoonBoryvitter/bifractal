@@ -26,7 +26,7 @@ main :: proc() {
         delete(arg)
     }
 
-    main_callback := proc(argc : c.int, argv : [^]cstring) {
+    main_callback := proc(argc: c.int, argv: [^]cstring) {
         sdl.EnterAppMainCallbacks(
             argc,
             argv,

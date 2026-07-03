@@ -19,14 +19,14 @@ RGBA8 :: distinct [4]u8
 
 @(private = "file")
 UiLayout :: struct {
-    navigation : mu.Rect,
-    palette :    mu.Rect,
-    stats :      mu.Rect,
+    navigation: mu.Rect,
+    palette:    mu.Rect,
+    stats:      mu.Rect,
 }
 
 // Functions
 
-create_font_texture :: proc(device : ^sdl.GPUDevice) -> ^sdl.GPUTexture {
+create_font_texture :: proc(device: ^sdl.GPUDevice) -> ^sdl.GPUTexture {
     atlas_size := len(mu.default_atlas_alpha)
     atlas_byte_size := atlas_size * size_of(RGBA8)
 
@@ -97,20 +97,25 @@ create_font_texture :: proc(device : ^sdl.GPUDevice) -> ^sdl.GPUTexture {
     return texture
 }
 
-available_width :: proc(ctx : ^mu.Context) -> i32 {
+available_width :: proc(ctx: ^mu.Context) -> i32 {
     container := mu.get_current_container(ctx)
     return container.body.w - ctx.style.padding * 2
 }
 
-create_sidebar_layout :: proc(resolution : Resolution) -> mu.Rect {
-    margin : i32 = 10
+create_sidebar_layout :: proc(resolution: Resolution) -> mu.Rect {
+    margin: i32 = 10
     panel_w := clamp(i32(f32(resolution.w) * 0.22), 280, 420)
     panel_h := i32(resolution.h) - margin * 2
 
-    return mu.Rect{i32(resolution.w) - panel_w - margin, margin, panel_w, panel_h}
+    return mu.Rect {
+        i32(resolution.w) - panel_w - margin,
+        margin,
+        panel_w,
+        panel_h,
+    }
 }
 
-create_ui :: proc(state : ^App_State) {
+create_ui :: proc(state: ^App_State) {
     context = state.ctx
     defer free_all(context.temp_allocator)
 
@@ -150,7 +155,7 @@ create_ui :: proc(state : ^App_State) {
             mu.label(ui_ctx, "--")
         }
          else {
-            mouse_x, mouse_y : f32
+            mouse_x, mouse_y: f32
             _ = sdl.GetMouseState(&mouse_x, &mouse_y)
 
             complex_coords := screen_to_complex(
@@ -304,12 +309,16 @@ create_ui :: proc(state : ^App_State) {
         mu.label(ui_ctx, "Resolution:")
         mu.label(
             ui_ctx,
-            fmt.tprintf("{:d}x{:d}", state.window_resolution.w, state.window_resolution.h),
+            fmt.tprintf(
+                "{:d}x{:d}",
+                state.window_resolution.w,
+                state.window_resolution.h,
+            ),
         )
     }
 }
 
-handle_mu_commands :: proc(state : ^App_State) -> int {
+handle_mu_commands :: proc(state: ^App_State) -> int {
     vertex_count := 0
 
     vertices_ptr := (^Ui_Vertex)(
@@ -325,43 +334,37 @@ handle_mu_commands :: proc(state : ^App_State) -> int {
     )
 
     vertices := ([^]Ui_Vertex)(vertices_ptr)[:MAX_UI_VERTICES]
-    cmd_iter : ^mu.Command
+    cmd_iter: ^mu.Command
 
     for mu.next_command(&state.ui_context, &cmd_iter) {
         #partial switch cmd in cmd_iter.variant {
-            case ^mu.Command_Rect:
-                push_rect(
-                        &vertices,
-                        &vertex_count,
-                        cmd.rect,
-                        {0, 0, 0, 0},
-                        cmd.color,
-                    )
-            case ^mu.Command_Text: for ch in cmd.str {
-                        if ch < 32 || int(ch) >= 128 do continue
-                        src :=
-                            mu.default_atlas[mu.DEFAULT_ATLAS_FONT + int(ch)]
-                        dst := mu.Rect{cmd.pos.x, cmd.pos.y, src.w, src.h}
-                        push_rect_uv(
-                            &vertices,
-                            &vertex_count,
-                            dst,
-                            src,
-                            cmd.color,
-                        )
-                        cmd.pos.x += src.w
-                    }
-            case ^mu.Command_Icon:
-                src := mu.default_atlas[cmd.id]
-                x := cmd.rect.x + (cmd.rect.w - src.w) / 2
-                y := cmd.rect.y + (cmd.rect.h - src.h) / 2
-                push_rect_uv(
-                    &vertices,
-                    &vertex_count,
-                    mu.Rect{x, y, src.w, src.h},
-                    src,
-                    cmd.color,
-                )
+        case ^mu.Command_Rect:
+            push_rect(
+                &vertices,
+                &vertex_count,
+                cmd.rect,
+                {0, 0, 0, 0},
+                cmd.color,
+            )
+        case ^mu.Command_Text:
+            for ch in cmd.str {
+                if ch < 32 || int(ch) >= 128 do continue
+                src := mu.default_atlas[mu.DEFAULT_ATLAS_FONT + int(ch)]
+                dst := mu.Rect{cmd.pos.x, cmd.pos.y, src.w, src.h}
+                push_rect_uv(&vertices, &vertex_count, dst, src, cmd.color)
+                cmd.pos.x += src.w
+            }
+        case ^mu.Command_Icon:
+            src := mu.default_atlas[cmd.id]
+            x := cmd.rect.x + (cmd.rect.w - src.w) / 2
+            y := cmd.rect.y + (cmd.rect.h - src.h) / 2
+            push_rect_uv(
+                &vertices,
+                &vertex_count,
+                mu.Rect{x, y, src.w, src.h},
+                src,
+                cmd.color,
+            )
         }
     }
 
@@ -369,10 +372,10 @@ handle_mu_commands :: proc(state : ^App_State) -> int {
 }
 
 push_rect :: proc(
-    vertices : ^[]Ui_Vertex,
-    count : ^int,
-    rect, uv : mu.Rect,
-    color : mu.Color,
+    vertices: ^[]Ui_Vertex,
+    count: ^int,
+    rect, uv: mu.Rect,
+    color: mu.Color,
 ) {
     c := [4]f32 {
         f32(color.r) / 255,
@@ -397,10 +400,10 @@ push_rect :: proc(
 }
 
 push_rect_uv :: proc(
-    vertices : ^[]Ui_Vertex,
-    count : ^int,
-    rect, src : mu.Rect,
-    color : mu.Color,
+    vertices: ^[]Ui_Vertex,
+    count: ^int,
+    rect, src: mu.Rect,
+    color: mu.Color,
 ) {
     c := [4]f32 {
         f32(color.r) / 255,
@@ -425,7 +428,7 @@ push_rect_uv :: proc(
     count^ += 6
 }
 
-palette_row :: proc(ui : ^mu.Context, label : string, color : ^[4]f32) {
+palette_row :: proc(ui: ^mu.Context, label: string, color: ^[4]f32) {
     mu.layout_row(ui, {-1}, 0)
     mu.label(ui, label)
 
@@ -443,7 +446,7 @@ palette_row :: proc(ui : ^mu.Context, label : string, color : ^[4]f32) {
 
 // State/pipeline management
 
-init_ui_pipeline :: proc(state : ^App_State) -> bool {
+init_ui_pipeline :: proc(state: ^App_State) -> bool {
     ui_vertex_shader := create_shader(
         state.gpu.device,
         "ui.vert",
@@ -529,7 +532,7 @@ init_ui_pipeline :: proc(state : ^App_State) -> bool {
     return true
 }
 
-init_ui_resources :: proc(state : ^App_State) {
+init_ui_resources :: proc(state: ^App_State) {
     state.gpu.ui_vertex_buffer = sdl.CreateGPUBuffer(
         state.gpu.device,
         sdl.GPUBufferCreateInfo {
@@ -558,65 +561,66 @@ init_ui_resources :: proc(state : ^App_State) {
 
 // Input management
 
-handle_ui_events :: proc(event : ^sdl.Event, state : ^App_State) {
+handle_ui_events :: proc(event: ^sdl.Event, state: ^App_State) {
     #partial switch event.type {
-        case .MOUSE_MOTION:
-            mu.input_mouse_move(
-                    &state.ui_context,
-                    i32(event.motion.x),
-                    i32(event.motion.y),
-                )
-        case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
-            btn : mu.Mouse
-            switch event.button.button {
-                case sdl.BUTTON_LEFT: btn = .LEFT
-                case sdl.BUTTON_MIDDLE: btn = .MIDDLE
-                case sdl.BUTTON_RIGHT: btn = .RIGHT
-            }
-            if event.type == .MOUSE_BUTTON_DOWN {
-                mu.input_mouse_down(
-                    &state.ui_context,
-                    i32(event.button.x),
-                    i32(event.button.y),
-                    btn,
-                )
-            }
-             else {
-                mu.input_mouse_up(
-                    &state.ui_context,
-                    i32(event.button.x),
-                    i32(event.button.y),
-                    btn,
-                )
-            }
-        case .MOUSE_WHEEL: if state.ui_context.hover_root != nil {
-                    mu.input_scroll(
-                        &state.ui_context,
-                        0,
-                        i32(event.wheel.y * -30),
-                    )
-                }
-        case .TEXT_INPUT: on_microui_text_input(event, state)
-        case .KEY_DOWN, .KEY_UP:
-            k, ok := sdl_ui_key_map[event.key.key]
-            if !ok {
-                break
-            }
-            if event.type == .KEY_DOWN {
-                mu.input_key_down(&state.ui_context, k)
-            }
-             else {
-                mu.input_key_up(&state.ui_context, k)
-            }
+    case .MOUSE_MOTION:
+        mu.input_mouse_move(
+            &state.ui_context,
+            i32(event.motion.x),
+            i32(event.motion.y),
+        )
+    case .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
+        btn: mu.Mouse
+        switch event.button.button {
+        case sdl.BUTTON_LEFT:
+            btn = .LEFT
+        case sdl.BUTTON_MIDDLE:
+            btn = .MIDDLE
+        case sdl.BUTTON_RIGHT:
+            btn = .RIGHT
+        }
+        if event.type == .MOUSE_BUTTON_DOWN {
+            mu.input_mouse_down(
+                &state.ui_context,
+                i32(event.button.x),
+                i32(event.button.y),
+                btn,
+            )
+        }
+         else {
+            mu.input_mouse_up(
+                &state.ui_context,
+                i32(event.button.x),
+                i32(event.button.y),
+                btn,
+            )
+        }
+    case .MOUSE_WHEEL:
+        if state.ui_context.hover_root != nil {
+            mu.input_scroll(&state.ui_context, 0, i32(event.wheel.y * -30))
+        }
+    case .TEXT_INPUT:
+        on_microui_text_input(event, state)
+    case .KEY_DOWN, .KEY_UP:
+        k, ok := sdl_ui_key_map[event.key.key]
+        if !ok {
+            break
+        }
+        if event.type == .KEY_DOWN {
+            mu.input_key_down(&state.ui_context, k)
+        }
+         else {
+            mu.input_key_up(&state.ui_context, k)
+        }
 
-            if .CTRL in state.ui_context.key_down_bits {
-                break
-            }
+        if .CTRL in state.ui_context.key_down_bits {
+            break
+        }
     }
 }
 
 @(private = "file")
-on_microui_text_input :: proc(event : ^sdl.Event, state : ^App_State) {
+on_microui_text_input :: proc(event: ^sdl.Event, state: ^App_State) {
     c_text := event.text.text
     if c_text == nil {
         return

@@ -4,7 +4,7 @@ import "core:log"
 
 import sdl "vendor:sdl3"
 
-render_frame :: proc(state : ^App_State, vertex_count : int) -> sdl.AppResult {
+render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
     command_buffer := sdl.AcquireGPUCommandBuffer(state.gpu.device)
 
     storage_texture_bindings := [1]sdl.GPUStorageTextureReadWriteBinding {
@@ -48,8 +48,8 @@ render_frame :: proc(state : ^App_State, vertex_count : int) -> sdl.AppResult {
         sdl.EndGPUCopyPass(ui_copy_pass)
     }
 
-    swapchain_texture : ^sdl.GPUTexture
-    width, height : u32
+    swapchain_texture: ^sdl.GPUTexture
+    width, height: u32
 
     ok := sdl.WaitAndAcquireGPUSwapchainTexture(
         command_buffer,

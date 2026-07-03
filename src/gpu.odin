@@ -6,19 +6,19 @@ import "core:log"
 import sdl "vendor:sdl3"
 
 create_shader :: proc(
-    device : ^sdl.GPUDevice,
-    name : string,
-    shader_type : sdl.GPUShaderStage,
-    num_uniform_buffers : u32 = 0,
-    num_samplers : u32 = 0,
-    num_storage_textures : u32 = 0,
-    num_storage_buffers : u32 = 0,
+    device: ^sdl.GPUDevice,
+    name: string,
+    shader_type: sdl.GPUShaderStage,
+    num_uniform_buffers: u32 = 0,
+    num_samplers: u32 = 0,
+    num_storage_textures: u32 = 0,
+    num_storage_buffers: u32 = 0,
 ) -> ^sdl.GPUShader {
     format, ext := get_shader_format(device)
 
     filepath := fmt.ctprintf("../assets/shaders/compiled/%s.%s", name, ext)
 
-    size : uint
+    size: uint
     code := sdl.LoadFile(filepath, &size)
     if code == nil {
         log.errorf("failed to load shader %s: %s", filepath, sdl.GetError())
@@ -49,7 +49,7 @@ create_shader :: proc(
 }
 
 get_shader_format :: proc(
-    device : ^sdl.GPUDevice,
+    device: ^sdl.GPUDevice,
 ) -> (
     sdl.GPUShaderFormatFlag,
     string,
@@ -63,14 +63,14 @@ get_shader_format :: proc(
 }
 
 create_compute_pipeline :: proc(
-    device : ^sdl.GPUDevice,
-    name : string,
+    device: ^sdl.GPUDevice,
+    name: string,
 ) -> ^sdl.GPUComputePipeline {
     format, ext := get_shader_format(device)
 
     filepath := fmt.ctprintf("../assets/shaders/compiled/%s.%s", name, ext)
 
-    size : uint
+    size: uint
     code := sdl.LoadFile(filepath, &size)
     defer sdl.free(code)
 
@@ -101,8 +101,8 @@ create_compute_pipeline :: proc(
 }
 
 create_output_texture :: proc(
-    device : ^sdl.GPUDevice,
-    resolution : Resolution,
+    device: ^sdl.GPUDevice,
+    resolution: Resolution,
 ) -> ^sdl.GPUTexture {
     return sdl.CreateGPUTexture(
         device,

@@ -26,7 +26,7 @@ init_window :: proc() -> ^sdl.Window {
     return window
 }
 
-init_gpu :: proc(window : ^sdl.Window) -> ^sdl.GPUDevice {
+init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
     gpu_device := sdl.CreateGPUDevice({.SPIRV, .DXIL, .MSL}, true, nil)
     if gpu_device == nil {
         log.errorf("unable to create SDL GPU device: %s", sdl.GetError())
@@ -42,7 +42,7 @@ init_gpu :: proc(window : ^sdl.Window) -> ^sdl.GPUDevice {
     return gpu_device
 }
 
-init_app :: proc(ctx : runtime.Context) -> ^App_State {
+init_app :: proc(ctx: runtime.Context) -> ^App_State {
     context = ctx
 
     state := new(App_State)

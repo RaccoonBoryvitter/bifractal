@@ -8,10 +8,10 @@ import sdl "vendor:sdl3"
 // Functions
 
 screen_to_complex :: proc(
-    screen_x, screen_y : f32,
-    resolution : Resolution,
-    center : [2]f32,
-    zoom : f32,
+    screen_x, screen_y: f32,
+    resolution: Resolution,
+    center: [2]f32,
+    zoom: f32,
 ) -> complex64 {
     w := f32(resolution.w)
     h := f32(resolution.h)
@@ -21,7 +21,7 @@ screen_to_complex :: proc(
     )
 }
 
-reset_fractal_view :: proc(uniform : ^Fractal_Uniform, zoom_level : ^f32) {
+reset_fractal_view :: proc(uniform: ^Fractal_Uniform, zoom_level: ^f32) {
     uniform.zoom = FRACTAL_DEFAULT_ZOOM
     zoom_level^ = math.log2(uniform.zoom)
     uniform.center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y}
@@ -30,9 +30,7 @@ reset_fractal_view :: proc(uniform : ^Fractal_Uniform, zoom_level : ^f32) {
 
 // State management
 
-init_fractal_state :: proc(
-    resolution : Resolution,
-) -> Fractal_State {
+init_fractal_state :: proc(resolution: Resolution) -> Fractal_State {
     zoom := FRACTAL_DEFAULT_ZOOM
     return Fractal_State {
         uniform = {
@@ -52,12 +50,12 @@ init_fractal_state :: proc(
 }
 
 init_fractal_compute :: proc(
-    device : ^sdl.GPUDevice,
-    resolution : Resolution,
+    device: ^sdl.GPUDevice,
+    resolution: Resolution,
 ) -> (
-    compute_pipeline : ^sdl.GPUComputePipeline,
-    texture : ^sdl.GPUTexture,
-    ok : bool,
+    compute_pipeline: ^sdl.GPUComputePipeline,
+    texture: ^sdl.GPUTexture,
+    ok: bool,
 ) {
     compute_pipeline = create_compute_pipeline(device, "mandelbrot")
     if compute_pipeline == nil {
@@ -73,49 +71,44 @@ init_fractal_compute :: proc(
 // Input management
 
 handle_fractal_events :: proc(
-    event : ^sdl.Event,
-    fractal : ^Fractal_State,
-    gpu_device : ^sdl.GPUDevice,
-    resolution : ^Resolution,
-    gpu_texture : ^^sdl.GPUTexture,
-    is_hover_active : bool,
+    event: ^sdl.Event,
+    fractal: ^Fractal_State,
+    gpu_device: ^sdl.GPUDevice,
+    resolution: ^Resolution,
+    gpu_texture: ^^sdl.GPUTexture,
+    is_hover_active: bool,
 ) -> sdl.AppResult {
     #partial switch event.type {
-        case .QUIT, .WINDOW_CLOSE_REQUESTED: return .SUCCESS
-        case .KEY_DOWN:
-            handle_fractal_keyboard_input(
-                    &fractal.uniform,
-                    &fractal.zoom_level,
-                    event.key.key,
-                )
-        case .MOUSE_WHEEL: if !is_hover_active {
-                    handle_fractal_zoom(
-                        fractal,
-                        event,
-                        resolution^,
-                    )
-                }
-        case .MOUSE_BUTTON_UP: if event.button.button == sdl.BUTTON_LEFT {
-                    return end_fractal_drag(fractal)
-                }
-        case .MOUSE_BUTTON_DOWN: if event.button.button == sdl.BUTTON_LEFT {
-                    return start_fractal_drag(fractal, is_hover_active)
-                }
-        case .MOUSE_MOTION:
-            handle_fractal_drag(
-                    fractal,
-                    event,
-                    is_hover_active,
-                    resolution^,
-                )
-        case .WINDOW_PIXEL_SIZE_CHANGED:
-            handle_resize(
-                    event,
-                    gpu_device,
-                    resolution,
-                    &fractal.uniform.resolution,
-                    gpu_texture,
-                )
+    case .QUIT, .WINDOW_CLOSE_REQUESTED:
+        return .SUCCESS
+    case .KEY_DOWN:
+        handle_fractal_keyboard_input(
+            &fractal.uniform,
+            &fractal.zoom_level,
+            event.key.key,
+        )
+    case .MOUSE_WHEEL:
+        if !is_hover_active {
+            handle_fractal_zoom(fractal, event, resolution^)
+        }
+    case .MOUSE_BUTTON_UP:
+        if event.button.button == sdl.BUTTON_LEFT {
+            return end_fractal_drag(fractal)
+        }
+    case .MOUSE_BUTTON_DOWN:
+        if event.button.button == sdl.BUTTON_LEFT {
+            return start_fractal_drag(fractal, is_hover_active)
+        }
+    case .MOUSE_MOTION:
+        handle_fractal_drag(fractal, event, is_hover_active, resolution^)
+    case .WINDOW_PIXEL_SIZE_CHANGED:
+        handle_resize(
+            event,
+            gpu_device,
+            resolution,
+            &fractal.uniform.resolution,
+            gpu_texture,
+        )
     }
 
     return .CONTINUE
@@ -123,11 +116,11 @@ handle_fractal_events :: proc(
 
 @(private = "file")
 handle_resize :: proc(
-    event : ^sdl.Event,
-    device : ^sdl.GPUDevice,
-    resolution : ^Resolution,
-    uniform_resolution : ^[2]f32,
-    texture : ^^sdl.GPUTexture,
+    event: ^sdl.Event,
+    device: ^sdl.GPUDevice,
+    resolution: ^Resolution,
+    uniform_resolution: ^[2]f32,
+    texture: ^^sdl.GPUTexture,
 ) {
     event_window := event.window
     resolution.w = u32(event_window.data1)
@@ -140,36 +133,41 @@ handle_resize :: proc(
 
 @(private = "file")
 handle_fractal_keyboard_input :: proc(
-    uniform : ^Fractal_Uniform,
-    zoom_level : ^f32,
-    keycode : sdl.Keycode,
+    uniform: ^Fractal_Uniform,
+    zoom_level: ^f32,
+    keycode: sdl.Keycode,
 ) {
     switch keycode {
-        case sdl.K_W: uniform.center.y -= FRACTAL_PAN_FACTOR / uniform.zoom
-        case sdl.K_S: uniform.center.y += FRACTAL_PAN_FACTOR / uniform.zoom
-        case sdl.K_A: uniform.center.x -= FRACTAL_PAN_FACTOR / uniform.zoom
-        case sdl.K_D: uniform.center.x += FRACTAL_PAN_FACTOR / uniform.zoom
-        case sdl.K_Q:
-            uniform.max_iter -= FRACTAL_ITERATION_DECREASE_STEP
-            if uniform.max_iter < FRACTAL_MIN_ITERATIONS {
-                uniform.max_iter = FRACTAL_MIN_ITERATIONS
-            }
-        case sdl.K_E:
-            uniform.max_iter += FRACTAL_ITERATION_STEP
-            if uniform.max_iter > FRACTAL_MAX_ITERATIONS {
-                uniform.max_iter = FRACTAL_MAX_ITERATIONS
-            }
-        case sdl.K_R: reset_fractal_view(uniform, zoom_level)
+    case sdl.K_W:
+        uniform.center.y -= FRACTAL_PAN_FACTOR / uniform.zoom
+    case sdl.K_S:
+        uniform.center.y += FRACTAL_PAN_FACTOR / uniform.zoom
+    case sdl.K_A:
+        uniform.center.x -= FRACTAL_PAN_FACTOR / uniform.zoom
+    case sdl.K_D:
+        uniform.center.x += FRACTAL_PAN_FACTOR / uniform.zoom
+    case sdl.K_Q:
+        uniform.max_iter -= FRACTAL_ITERATION_DECREASE_STEP
+        if uniform.max_iter < FRACTAL_MIN_ITERATIONS {
+            uniform.max_iter = FRACTAL_MIN_ITERATIONS
+        }
+    case sdl.K_E:
+        uniform.max_iter += FRACTAL_ITERATION_STEP
+        if uniform.max_iter > FRACTAL_MAX_ITERATIONS {
+            uniform.max_iter = FRACTAL_MAX_ITERATIONS
+        }
+    case sdl.K_R:
+        reset_fractal_view(uniform, zoom_level)
     }
 }
 
 @(private = "file")
 handle_fractal_zoom :: proc(
-    fractal : ^Fractal_State,
-    event : ^sdl.Event,
-    resolution : Resolution,
+    fractal: ^Fractal_State,
+    event: ^sdl.Event,
+    resolution: Resolution,
 ) {
-    mouse_x, mouse_y : f32
+    mouse_x, mouse_y: f32
     _ = sdl.GetMouseState(&mouse_x, &mouse_y)
 
     w := f32(resolution.w)
@@ -197,10 +195,10 @@ handle_fractal_zoom :: proc(
 
 @(private = "file")
 handle_fractal_drag :: proc(
-    fractal : ^Fractal_State,
-    event : ^sdl.Event,
-    is_hover_active : bool,
-    resolution : Resolution,
+    fractal: ^Fractal_State,
+    event: ^sdl.Event,
+    is_hover_active: bool,
+    resolution: Resolution,
 ) {
     if !fractal.is_dragging || is_hover_active {
         return
@@ -217,8 +215,8 @@ handle_fractal_drag :: proc(
 
 @(private = "file")
 start_fractal_drag :: proc(
-    fractal : ^Fractal_State,
-    is_hover_active : bool,
+    fractal: ^Fractal_State,
+    is_hover_active: bool,
 ) -> sdl.AppResult {
     if is_hover_active {
         return .CONTINUE
@@ -234,7 +232,7 @@ start_fractal_drag :: proc(
 }
 
 @(private = "file")
-end_fractal_drag :: proc(fractal : ^Fractal_State) -> sdl.AppResult {
+end_fractal_drag :: proc(fractal: ^Fractal_State) -> sdl.AppResult {
     fractal.is_dragging = false
     ok := sdl.SetCursor(fractal.default_cursor)
     if !ok {

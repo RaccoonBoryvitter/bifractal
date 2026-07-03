@@ -2,18 +2,16 @@ package main
 
 import "base:runtime"
 import "core:c"
-import "core:fmt"
 import "core:log"
-import "core:math"
 
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
 @(export)
 SDL_AppInit :: proc "c" (
-    appstate : ^rawptr,
-    argc : c.int,
-    argv : [^]cstring,
+    appstate: ^rawptr,
+    argc: c.int,
+    argv: [^]cstring,
 ) -> sdl.AppResult {
     context = runtime.default_context()
     state := init_app(context)
@@ -27,8 +25,8 @@ SDL_AppInit :: proc "c" (
 
 @(export)
 SDL_AppEvent :: proc "c" (
-    appstate : rawptr,
-    event : ^sdl.Event,
+    appstate: rawptr,
+    event: ^sdl.Event,
 ) -> sdl.AppResult {
     state := (^App_State)(appstate)
     context = state.ctx
@@ -59,7 +57,7 @@ SDL_AppEvent :: proc "c" (
     return .CONTINUE
 }
 
-fps_update :: proc(state : ^App_State) {
+fps_update :: proc(state: ^App_State) {
     state.fps_frame_count += 1
     now := sdl.GetTicks()
     elapsed := now - state.fps_last_ticks
@@ -73,7 +71,7 @@ fps_update :: proc(state : ^App_State) {
 }
 
 @(export)
-SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
+SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     state := (^App_State)(appstate)
     context = state.ctx
     defer free_all(context.temp_allocator)
@@ -86,7 +84,7 @@ SDL_AppIterate :: proc "c" (appstate : rawptr) -> sdl.AppResult {
 }
 
 @(export)
-SDL_AppQuit :: proc "c" (appstate : rawptr, result : sdl.AppResult) {
+SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     state := (^App_State)(appstate)
     context = state.ctx
 
