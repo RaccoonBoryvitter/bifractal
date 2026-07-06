@@ -16,6 +16,8 @@ out/
 bin/
 dist/
 
+deps/clay/.clay-src/
+
 .jj/
 
 .vs/
