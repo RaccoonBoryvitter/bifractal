@@ -6,6 +6,7 @@ import "core:math/rand"
 
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
+import imgui "deps:imgui"
 
 init_window :: proc() -> ^sdl.Window {
     ok := sdl.Init({.VIDEO, .EVENTS})
@@ -14,16 +15,19 @@ init_window :: proc() -> ^sdl.Window {
         return nil
     }
 
+    main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
     window := sdl.CreateWindow(
         WINDOW_TITLE,
-        i32(WINDOW_RESOLUTION.w),
-        i32(WINDOW_RESOLUTION.h),
+        i32(f32(WINDOW_RESOLUTION.w) * main_scale), // I will eventually come up
+        i32(f32(WINDOW_RESOLUTION.h) * main_scale), // with a better solution
         {.RESIZABLE, .HIGH_PIXEL_DENSITY},
     )
     if window == nil {
         log.errorf("unable to create SDL window: %s", sdl.GetError())
         return nil
     }
+
+    sdl.SetWindowPosition(window, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED)
 
     return window
 }
@@ -116,8 +120,9 @@ init_app :: proc(ctx: runtime.Context) -> ^App_State {
         ui_buffer_size // transfer buffer
 
     state.rand_state = rand.create_u64(42)
-
     state.fps_last_ticks = sdl.GetTicks()
+
+    imgui.CHECKVERSION()
 
     return state
 }

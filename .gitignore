@@ -16,7 +16,7 @@ out/
 bin/
 dist/
 
-deps/clay/.clay-src/
+deps/imgui/
 
 .jj/
 
