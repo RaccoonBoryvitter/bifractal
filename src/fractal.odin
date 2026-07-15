@@ -1,13 +1,12 @@
 package main
 
-import "core:log"
 import "core:math"
 
 import sdl "vendor:sdl3"
 
 // Functions
 
-screen_to_complex :: proc(
+view_screen_to_complex :: proc(
     screen_x, screen_y: f32,
     resolution: Resolution,
     center: [2]f32,
@@ -32,7 +31,7 @@ get_window_pixel_scale :: proc(window: ^sdl.Window) -> [2]f32 {
     return {f32(pixel_w) / f32(logical_w), f32(pixel_h) / f32(logical_h)}
 }
 
-reset_fractal_view :: proc(uniform: ^Fractal_Uniform, zoom_level: ^f32) {
+reset_fractal_view :: proc(uniform: ^Fractal_Params, zoom_level: ^f32) {
     uniform.zoom = FRACTAL_DEFAULT_ZOOM
     zoom_level^ = math.log2(uniform.zoom)
     uniform.center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y}
@@ -44,7 +43,7 @@ reset_fractal_view :: proc(uniform: ^Fractal_Uniform, zoom_level: ^f32) {
 init_fractal_state :: proc(resolution: Resolution) -> Fractal_State {
     zoom := FRACTAL_DEFAULT_ZOOM
     return Fractal_State {
-        uniform = {
+        params = {
             center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y},
             zoom = FRACTAL_DEFAULT_ZOOM,
             max_iter = FRACTAL_DEFAULT_MAX_ITER,
@@ -85,7 +84,7 @@ init_fractal_compute :: proc(
 
 // Input management
 
-handle_fractal_events :: proc(
+fractal_process_input :: proc(
     event: ^sdl.Event,
     fractal: ^Fractal_State,
     gpu_device: ^sdl.GPUDevice,
@@ -101,7 +100,7 @@ handle_fractal_events :: proc(
     case .KEY_DOWN:
         if !want_capture_keyboard {
             handle_fractal_keyboard_input(
-                &fractal.uniform,
+                &fractal.params,
                 &fractal.zoom_level,
                 event.key.key,
             )
@@ -132,7 +131,7 @@ handle_fractal_events :: proc(
             window,
             gpu_device,
             resolution,
-            &fractal.uniform.resolution,
+            &fractal.params.resolution,
             gpu_texture,
         )
     }
@@ -166,7 +165,7 @@ handle_resize :: proc(
 
 @(private = "file")
 handle_fractal_keyboard_input :: proc(
-    uniform: ^Fractal_Uniform,
+    uniform: ^Fractal_Params,
     zoom_level: ^f32,
     keycode: sdl.Keycode,
 ) {
@@ -210,25 +209,25 @@ handle_fractal_zoom :: proc(
     w := f32(resolution.w)
     h := f32(resolution.h)
     mouse_complex := [2]f32 {
-        (mouse_x - w * 0.5) / (h * fractal.uniform.zoom) +
-        fractal.uniform.center.x,
-        (mouse_y - h * 0.5) / (h * fractal.uniform.zoom) +
-        fractal.uniform.center.y,
+        (mouse_x - w * 0.5) / (h * fractal.params.zoom) +
+        fractal.params.center.x,
+        (mouse_y - h * 0.5) / (h * fractal.params.zoom) +
+        fractal.params.center.y,
     }
 
     fractal.zoom_level += event.wheel.y * FRACTAL_ZOOM_SCROLL_FACTOR
     fractal.zoom_level = max(fractal.zoom_level, FRACTAL_MIN_ZOOM_LOG)
-    fractal.uniform.zoom = math.exp(fractal.zoom_level)
+    fractal.params.zoom = math.exp(fractal.zoom_level)
 
     new_mouse_complex := [2]f32 {
-        (mouse_x - w * 0.5) / (h * fractal.uniform.zoom) +
-        fractal.uniform.center.x,
-        (mouse_y - h * 0.5) / (h * fractal.uniform.zoom) +
-        fractal.uniform.center.y,
+        (mouse_x - w * 0.5) / (h * fractal.params.zoom) +
+        fractal.params.center.x,
+        (mouse_y - h * 0.5) / (h * fractal.params.zoom) +
+        fractal.params.center.y,
     }
 
-    fractal.uniform.center.x += mouse_complex.x - new_mouse_complex.x
-    fractal.uniform.center.y += mouse_complex.y - new_mouse_complex.y
+    fractal.params.center.x += mouse_complex.x - new_mouse_complex.x
+    fractal.params.center.y += mouse_complex.y - new_mouse_complex.y
 }
 
 @(private = "file")
@@ -247,10 +246,10 @@ handle_fractal_drag :: proc(
     dx := f32(event.motion.xrel) * scale.x
     dy := f32(event.motion.yrel) * scale.y
     drag_scale :=
-        FRACTAL_MOUSE_DRAG_SCALE / (f32(resolution.h) * fractal.uniform.zoom)
+        FRACTAL_MOUSE_DRAG_SCALE / (f32(resolution.h) * fractal.params.zoom)
 
-    fractal.uniform.center.x -= dx * drag_scale
-    fractal.uniform.center.y -= dy * drag_scale
+    fractal.params.center.x -= dx * drag_scale
+    fractal.params.center.y -= dy * drag_scale
 }
 
 @(private = "file")

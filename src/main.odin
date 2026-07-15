@@ -26,8 +26,8 @@ main :: proc() {
         arg_v[i] = c_arg
     }
 
-    main_callback := proc(argc: c.int, argv: [^]cstring) {
-        sdl.EnterAppMainCallbacks(
+    main_callback := proc "c" (argc: c.int, argv: [^]cstring) -> c.int {
+        return sdl.EnterAppMainCallbacks(
             argc,
             argv,
             SDL_AppInit,

@@ -1,13 +1,11 @@
 package main
 
-import "core:log"
-
-import imgui "deps:imgui"
-import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
+import im "deps:imgui"
+import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 
 import sdl "vendor:sdl3"
 
-render_frame :: proc(state: ^App_State) -> sdl.AppResult {
+render_present_frame :: proc(state: ^App_State) -> sdl.AppResult {
     command_buffer := sdl.AcquireGPUCommandBuffer(state.gpu.device)
 
     storage_texture_bindings := [1]sdl.GPUStorageTextureReadWriteBinding {
@@ -24,8 +22,8 @@ render_frame :: proc(state: ^App_State) -> sdl.AppResult {
     sdl.PushGPUComputeUniformData(
         command_buffer,
         0,
-        &state.fractal.uniform,
-        size_of(Fractal_Uniform),
+        &state.fractal.params,
+        size_of(Fractal_Params),
     )
     sdl.DispatchGPUCompute(
         compute_pass,
@@ -93,13 +91,13 @@ render_frame :: proc(state: ^App_State) -> sdl.AppResult {
         },
     )
 
-    imgui.Render()
-    draw_data := imgui.GetDrawData()
+    im.Render()
+    draw_data := im.GetDrawData()
     is_minimized :=
         draw_data.DisplaySize.x == 0 || draw_data.DisplaySize.y == 0
 
     if swapchain_texture != nil && !is_minimized {
-        imgui_impl_sdlgpu3.PrepareDrawData(draw_data, command_buffer)
+        im_sdlgpu.PrepareDrawData(draw_data, command_buffer)
 
         target_info := sdl.GPUColorTargetInfo {
             texture  = swapchain_texture,
@@ -112,12 +110,7 @@ render_frame :: proc(state: ^App_State) -> sdl.AppResult {
             1,
             nil,
         )
-        imgui_impl_sdlgpu3.RenderDrawData(
-            draw_data,
-            command_buffer,
-            render_pass,
-            nil,
-        )
+        im_sdlgpu.RenderDrawData(draw_data, command_buffer, render_pass, nil)
 
         sdl.EndGPURenderPass(render_pass)
     }

@@ -6,7 +6,7 @@ import "core:math/rand"
 // Functions
 
 apply_palette_preset :: proc(
-    uniform: ^Fractal_Uniform,
+    uniform: ^Fractal_Params,
     preset: Palette_Preset,
 ) {
     uniform.palette_a = preset.a
@@ -15,18 +15,18 @@ apply_palette_preset :: proc(
     uniform.palette_d = preset.d
 }
 
-mirror_palette :: proc(uniform: ^Fractal_Uniform) {
+mirror_palette :: proc(uniform: ^Fractal_Params) {
     uniform.palette_d.xyz = 1.0 - uniform.palette_d.xyz
 }
 
-rotate_palette :: proc(uniform: ^Fractal_Uniform, k: f32) {
+rotate_palette :: proc(uniform: ^Fractal_Params, k: f32) {
     for i in 0 ..< 3 {
         rotated := uniform.palette_d[i] + k
         uniform.palette_d[i] = rotated - math.floor(rotated)
     }
 }
 
-randomize_palette :: proc(uniform: ^Fractal_Uniform, gen: rand.Generator) {
+randomize_palette :: proc(uniform: ^Fractal_Params, gen: rand.Generator) {
     for i in 0 ..< 3 {
         uniform.palette_a[i] = rand.float32_range(0.0, 1.0, gen)
         uniform.palette_b[i] = rand.float32_range(0.0, 1.0, gen)

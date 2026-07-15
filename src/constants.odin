@@ -36,7 +36,7 @@ PALETTE_SWATCH_STEPS :: 64
 PALETTE_PRESET_SWATCH_STEPS :: 16
 PALETTE_SWATCH_WIDTH :: 64
 
-palette_presets := [?]Palette_Preset {
+PALETTE_PRESETS :: [?]Palette_Preset {
     {
         name = "Electric",
         a = {0.5, 0.5, 0.5, 0.0},

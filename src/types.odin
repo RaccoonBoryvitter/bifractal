@@ -5,21 +5,16 @@ import "base:runtime"
 import "core:log"
 import "core:math/rand"
 
-import imgui "deps:imgui"
+import im "deps:imgui"
 import sdl "vendor:sdl3"
 
 Gpu_Resources :: struct {
-    device:             ^sdl.GPUDevice,
-    compute_pipeline:   ^sdl.GPUComputePipeline,
-    texture:            ^sdl.GPUTexture,
-    ui_pipeline:        ^sdl.GPUGraphicsPipeline,
-    ui_vertex_buffer:   ^sdl.GPUBuffer,
-    ui_transfer_buffer: ^sdl.GPUTransferBuffer,
-    ui_font_texture:    ^sdl.GPUTexture,
-    ui_font_sampler:    ^sdl.GPUSampler,
+    device:           ^sdl.GPUDevice,
+    compute_pipeline: ^sdl.GPUComputePipeline,
+    texture:          ^sdl.GPUTexture,
 }
 
-Fractal_Uniform :: struct {
+Fractal_Params :: struct {
     center:     [2]f32,
     zoom:       f32,
     max_iter:   i32,
@@ -31,7 +26,7 @@ Fractal_Uniform :: struct {
 }
 
 Fractal_State :: struct {
-    uniform:        Fractal_Uniform,
+    params:         Fractal_Params,
     zoom_level:     f32,
     is_dragging:    bool,
     default_cursor: ^sdl.Cursor,
@@ -46,22 +41,12 @@ Palette_Preset :: struct {
     d:    [4]f32,
 }
 
-Ui_Vertex :: struct {
-    position: [2]f32,
-    uv:       [2]f32,
-    color:    [4]f32,
-}
-
-Ui_Globals :: struct {
-    screen_size: [2]f32,
-}
-
 Resolution :: struct {
     w, h: u32,
 }
 
 ImGui_Resources :: struct {
-    ctx: ^imgui.Context,
+    ctx: ^im.Context,
 }
 
 App_State :: struct {
@@ -80,5 +65,5 @@ App_State :: struct {
     fps_frame_count:      u32,
     fps_last_ticks:       u64,
     fps_current:          f32,
-    imgui:                ImGui_Resources,
+    im_context:           ^im.Context,
 }

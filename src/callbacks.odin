@@ -6,9 +6,9 @@ import "core:log"
 
 import sdl "vendor:sdl3"
 
-import imgui "deps:imgui"
-import imgui_impl_sdl3 "deps:imgui/imgui_impl_sdl3"
-import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
+import im "deps:imgui"
+import im_sdl "deps:imgui/imgui_impl_sdl3"
+import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 
 sdl_log_callback :: proc "c" (
     userdata: rawptr,
@@ -67,7 +67,7 @@ SDL_AppEvent :: proc "c" (
     state := (^App_State)(appstate)
     context.logger = state.logger
 
-    imgui_impl_sdl3.ProcessEvent(event)
+    im_sdl.ProcessEvent(event)
 
     if event.type == .KEY_DOWN && event.key.key == sdl.K_F11 {
         window_flags := sdl.GetWindowFlags(state.window)
@@ -76,9 +76,9 @@ SDL_AppEvent :: proc "c" (
         return .CONTINUE
     }
 
-    io := imgui.GetIOImGuiContextPtr(state.imgui.ctx)
-    is_mouse_captured := io.WantCaptureMouse || imgui.IsAnyItemHovered()
-    fractal_result := handle_fractal_events(
+    io := im.GetIOImGuiContextPtr(state.im_context)
+    is_mouse_captured := io.WantCaptureMouse || im.IsAnyItemHovered()
+    fractal_result := fractal_process_input(
         event,
         &state.fractal,
         state.gpu.device,
@@ -118,13 +118,13 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 
     fps_update(state)
 
-    imgui_impl_sdl3.NewFrame()
-    imgui_impl_sdlgpu3.NewFrame()
-    imgui.NewFrame()
+    im_sdl.NewFrame()
+    im_sdlgpu.NewFrame()
+    im.NewFrame()
 
     create_imgui_ui(state)
 
-    return render_frame(state)
+    return render_present_frame(state)
 }
 
 @(export)

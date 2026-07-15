@@ -5,9 +5,9 @@ import "core:log"
 import "core:math/rand"
 import "core:strings"
 
-import imgui "deps:imgui"
-import imgui_impl_sdl3 "deps:imgui/imgui_impl_sdl3"
-import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
+import im "deps:imgui"
+import im_sdl "deps:imgui/imgui_impl_sdl3"
+import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 import sdl "vendor:sdl3"
 
 init_window :: proc() -> ^sdl.Window {
@@ -103,10 +103,10 @@ destroy_app :: proc(state: ^App_State) {
         return
     }
 
-    if state.imgui.ctx != nil {
-        imgui_impl_sdlgpu3.Shutdown()
-        imgui_impl_sdl3.Shutdown()
-        imgui.DestroyContext(state.imgui.ctx)
+    if state.im_context != nil {
+        im_sdlgpu.Shutdown()
+        im_sdl.Shutdown()
+        im.DestroyContext(state.im_context)
     }
 
     if state.fractal.move_cursor != nil {
@@ -120,7 +120,10 @@ destroy_app :: proc(state: ^App_State) {
         sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
     }
     if state.gpu.compute_pipeline != nil && state.gpu.device != nil {
-        sdl.ReleaseGPUComputePipeline(state.gpu.device, state.gpu.compute_pipeline)
+        sdl.ReleaseGPUComputePipeline(
+            state.gpu.device,
+            state.gpu.compute_pipeline,
+        )
     }
 
     if state.gpu.device != nil {
@@ -185,7 +188,9 @@ init_app :: proc() -> ^App_State {
             ),
         ),
     )
-    state.gpu_driver = strings.clone(string(sdl.GetGPUDeviceDriver(state.gpu.device)))
+    state.gpu_driver = strings.clone(
+        string(sdl.GetGPUDeviceDriver(state.gpu.device)),
+    )
 
     pipeline, texture, init_ok := init_fractal_compute(
         state.gpu.device,
@@ -203,31 +208,30 @@ init_app :: proc() -> ^App_State {
     state.rand_state = rand.create_u64(42)
     state.fps_last_ticks = sdl.GetTicks()
 
-    imgui.CHECKVERSION()
-    state.imgui = {}
-    state.imgui.ctx = imgui.CreateContext()
-    imgui_io := imgui.GetIOImGuiContextPtr(state.imgui.ctx)
+    im.CHECKVERSION()
+    state.im_context = im.CreateContext()
+    imgui_io := im.GetIOImGuiContextPtr(state.im_context)
     imgui_io.ConfigFlags += {.NavEnableKeyboard, .DockingEnable}
 
     system_theme := sdl.GetSystemTheme()
     switch system_theme {
     case .UNKNOWN:
-        imgui.StyleColorsClassic()
+        im.StyleColorsClassic()
     case .DARK:
-        imgui.StyleColorsDark()
+        im.StyleColorsDark()
     case .LIGHT:
-        imgui.StyleColorsLight()
+        im.StyleColorsLight()
     }
 
-    imgui_style := imgui.GetStyle()
+    imgui_style := im.GetStyle()
     main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
-    imgui.Style_ScaleAllSizes(imgui_style, main_scale)
+    im.Style_ScaleAllSizes(imgui_style, main_scale)
     imgui_style.FontScaleDpi = main_scale
     imgui_io.ConfigDpiScaleFonts = true
 
-    imgui_impl_sdl3.InitForSDLGPU(state.window)
+    im_sdl.InitForSDLGPU(state.window)
 
-    init_info := imgui_impl_sdlgpu3.InitInfo {
+    init_info := im_sdlgpu.InitInfo {
         Device               = state.gpu.device,
         ColorTargetFormat    = sdl.GetGPUSwapchainTextureFormat(
             state.gpu.device,
@@ -237,7 +241,7 @@ init_app :: proc() -> ^App_State {
         SwapchainComposition = .SDR,
         PresentMode          = .VSYNC,
     }
-    imgui_impl_sdlgpu3.Init(&init_info)
+    im_sdlgpu.Init(&init_info)
 
     return state
 }
