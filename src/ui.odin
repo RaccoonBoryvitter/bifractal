@@ -137,12 +137,6 @@ create_imgui_ui :: proc(state: ^App_State) {
                 state.window_resolution.h,
             ),
         )
-        imgui.Text(
-            fmt.ctprintf(
-                "GPU VRAM: %.2f MB",
-                f64(state.gpu_vram_bytes) / (1024.0 * 1024.0),
-            ),
-        )
     }
 }
 
