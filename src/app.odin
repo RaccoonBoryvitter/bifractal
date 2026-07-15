@@ -3,6 +3,7 @@ package main
 import "base:runtime"
 import "core:log"
 import "core:math/rand"
+import "core:strings"
 
 import imgui "deps:imgui"
 import imgui_impl_sdl3 "deps:imgui/imgui_impl_sdl3"
@@ -33,6 +34,7 @@ init_window :: proc() -> ^sdl.Window {
             "unable to create SDL window: %s",
             sdl.GetError(),
         )
+        sdl.Quit()
         return nil
     }
 
@@ -63,6 +65,7 @@ init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
             "unable to claim window for GPU device: %s",
             sdl.GetError(),
         )
+        sdl.DestroyGPUDevice(gpu_device)
         return nil
     }
 
@@ -95,6 +98,50 @@ create_app_logger :: proc() -> log.Logger {
     }
 }
 
+destroy_app :: proc(state: ^App_State) {
+    if state == nil {
+        return
+    }
+
+    if state.imgui.ctx != nil {
+        imgui_impl_sdlgpu3.Shutdown()
+        imgui_impl_sdl3.Shutdown()
+        imgui.DestroyContext(state.imgui.ctx)
+    }
+
+    if state.fractal.move_cursor != nil {
+        sdl.DestroyCursor(state.fractal.move_cursor)
+    }
+    if state.fractal.default_cursor != nil {
+        sdl.DestroyCursor(state.fractal.default_cursor)
+    }
+
+    if state.gpu.texture != nil && state.gpu.device != nil {
+        sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
+    }
+    if state.gpu.compute_pipeline != nil && state.gpu.device != nil {
+        sdl.ReleaseGPUComputePipeline(state.gpu.device, state.gpu.compute_pipeline)
+    }
+
+    if state.gpu.device != nil {
+        sdl.DestroyGPUDevice(state.gpu.device)
+    }
+    if state.window != nil {
+        sdl.DestroyWindow(state.window)
+    }
+
+    sdl.SetLogOutputFunction(sdl.GetDefaultLogOutputFunction(), nil)
+    sdl.Quit()
+
+    delete(state.gpu_name)
+    delete(state.gpu_driver)
+
+    if state.logger.procedure != nil {
+        log.destroy_console_logger(state.logger)
+    }
+    free(state)
+}
+
 init_app :: proc() -> ^App_State {
     state := new(App_State)
     state.logger = create_app_logger()
@@ -108,11 +155,7 @@ init_app :: proc() -> ^App_State {
     }
 
     ok := true
-    defer if !ok {
-        sdl.SetLogOutputFunction(sdl.GetDefaultLogOutputFunction(), nil)
-        log.destroy_console_logger(state.logger)
-        free(state)
-    }
+    defer if !ok { destroy_app(state) }
 
     state.window = init_window()
     if state.window == nil {
@@ -133,14 +176,16 @@ init_app :: proc() -> ^App_State {
     }
 
     gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)
-    state.gpu_name = string(
-        sdl.GetStringProperty(
-            gpu_props,
-            sdl.PROP_GPU_DEVICE_NAME_STRING,
-            "Unknown",
+    state.gpu_name = strings.clone(
+        string(
+            sdl.GetStringProperty(
+                gpu_props,
+                sdl.PROP_GPU_DEVICE_NAME_STRING,
+                "Unknown",
+            ),
         ),
     )
-    state.gpu_driver = string(sdl.GetGPUDeviceDriver(state.gpu.device))
+    state.gpu_driver = strings.clone(string(sdl.GetGPUDeviceDriver(state.gpu.device)))
 
     pipeline, texture, init_ok := init_fractal_compute(
         state.gpu.device,

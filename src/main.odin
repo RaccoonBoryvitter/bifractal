@@ -11,6 +11,9 @@ main :: proc() {
     arg_c := (c.int)(len(os.args))
     arg_v := make([]cstring, arg_c)
     defer delete(arg_v)
+    defer for arg in arg_v {
+        delete(arg)
+    }
 
     for arg, i in os.args {
         c_arg, err := strings.clone_to_cstring(arg)
@@ -21,9 +24,6 @@ main :: proc() {
         }
 
         arg_v[i] = c_arg
-    }
-    defer for arg in arg_v {
-        delete(arg)
     }
 
     main_callback := proc(argc: c.int, argv: [^]cstring) {

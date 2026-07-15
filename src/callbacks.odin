@@ -131,23 +131,8 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     context = runtime.default_context()
     state := (^App_State)(appstate)
-    context.logger = state.logger
-
-    imgui_impl_sdlgpu3.Shutdown()
-    imgui_impl_sdl3.Shutdown()
-    imgui.DestroyContext(state.imgui.ctx)
-
-    sdl.DestroyCursor(state.fractal.move_cursor)
-    sdl.DestroyCursor(state.fractal.default_cursor)
-
-    sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
-    sdl.ReleaseGPUComputePipeline(state.gpu.device, state.gpu.compute_pipeline)
-
-    sdl.DestroyGPUDevice(state.gpu.device)
-    sdl.DestroyWindow(state.window)
-    sdl.SetLogOutputFunction(sdl.GetDefaultLogOutputFunction(), nil)
-    sdl.Quit()
-
-    log.destroy_console_logger(state.logger)
-    free(state)
+    if state != nil {
+        context.logger = state.logger
+        destroy_app(state)
+    }
 }
