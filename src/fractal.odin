@@ -68,7 +68,7 @@ init_fractal_compute :: proc(
     texture: ^sdl.GPUTexture,
     ok: bool,
 ) {
-    compute_pipeline = create_compute_pipeline(device, "mandelbrot")
+    compute_pipeline = create_compute_pipeline(device)
     if compute_pipeline == nil {
         sdl.LogError(
             i32(sdl.LogCategory.RENDER),

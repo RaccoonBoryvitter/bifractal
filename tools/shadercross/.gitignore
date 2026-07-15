@@ -1,0 +1,8 @@
+# Ignore downloaded SDL_shadercross binaries and dependencies.
+shadercross
+shadercross.exe
+SDL-shadercross
+SDL-shadercross.exe
+*.dll
+*.so
+*.dylib

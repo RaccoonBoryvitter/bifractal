@@ -7,9 +7,6 @@ WINDOW_RESOLUTION :: Resolution {
     h = 720,
 }
 
-// Shader paths
-MANDELBROT_SHADER_PATH :: "../assets/shaders/compiled/mandelbrot.spv"
-
 // UI configuration
 MAX_UI_VERTICES :: 65536
 UI_CONTROL_WINDOW_WIDTH :: 360

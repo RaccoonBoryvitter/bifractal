@@ -16,6 +16,8 @@ out/
 bin/
 dist/
 
+imgui.ini
+
 deps/imgui/
 
 .jj/
