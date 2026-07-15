@@ -4,7 +4,7 @@ if (-not (Test-Path -Path $BUILD_DIR)) {
     New-Item -ItemType Directory -Path $BUILD_DIR
 }
 
-& odin.exe build src/ -out:$BUILD_DIR/odinzoom.exe -collection:deps=/deps
+& odin.exe build src/ -out:$BUILD_DIR/odinzoom.exe -collection:deps=$PWD/deps
 
 $ODIN_ROOT = & odin.exe root
 

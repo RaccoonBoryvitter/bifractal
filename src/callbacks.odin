@@ -7,6 +7,10 @@ import "core:log"
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
+import imgui "deps:imgui"
+import imgui_impl_sdl3 "deps:imgui/imgui_impl_sdl3"
+import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
+
 @(export)
 SDL_AppInit :: proc "c" (
     appstate: ^rawptr,
@@ -33,6 +37,8 @@ SDL_AppEvent :: proc "c" (
 
     handle_ui_events(event, state)
 
+    imgui_impl_sdl3.ProcessEvent(event)
+
     if event.type == .KEY_DOWN && event.key.key == sdl.K_F11 {
         window_flags := sdl.GetWindowFlags(state.window)
         is_fullscreen := .FULLSCREEN in window_flags
@@ -41,7 +47,7 @@ SDL_AppEvent :: proc "c" (
     }
 
     // Fractal input handling
-    is_hover_active := state.ui_context.hover_root != nil
+    is_hover_active := state.ui_context.hover_root != nil || imgui.IsAnyItemHovered()
     fractal_result := handle_fractal_events(
         event,
         &state.fractal,
@@ -80,6 +86,13 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     create_ui(state)
     vertex_count := handle_mu_commands(state)
 
+    imgui_impl_sdlgpu3.NewFrame()
+    imgui_impl_sdl3.NewFrame()
+    imgui.NewFrame()
+
+    imgui.ShowDemoWindow()
+    imgui.EndFrame()
+
     return render_frame(state, vertex_count)
 }
 
@@ -87,6 +100,10 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     state := (^App_State)(appstate)
     context = state.ctx
+
+    imgui_impl_sdlgpu3.Shutdown()
+    imgui_impl_sdl3.Shutdown()
+    imgui.DestroyContext(state.imgui.ctx)
 
     sdl.DestroyCursor(state.fractal.move_cursor)
     sdl.DestroyCursor(state.fractal.default_cursor)

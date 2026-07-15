@@ -2,6 +2,9 @@ package main
 
 import "core:log"
 
+import imgui "deps:imgui"
+import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
+
 import sdl "vendor:sdl3"
 
 render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
@@ -144,6 +147,41 @@ render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
 
         sdl.DrawGPUPrimitives(render_pass, u32(vertex_count), 1, 0, 0)
         sdl.EndGPURenderPass(render_pass)
+    }
+
+    imgui.Render()
+    draw_data := imgui.GetDrawData()
+    is_minimized :=
+        draw_data.DisplaySize.x == 0 || draw_data.DisplaySize.y == 0
+
+    if swapchain_texture != nil && !is_minimized {
+        imgui_impl_sdlgpu3.PrepareDrawData(draw_data, command_buffer)
+
+        target_info := sdl.GPUColorTargetInfo {
+            texture     = swapchain_texture,
+            load_op     = .LOAD,
+            store_op    = .STORE,
+        }
+        render_pass := sdl.BeginGPURenderPass(
+            command_buffer,
+            &target_info,
+            1,
+            nil,
+        )
+        imgui_impl_sdlgpu3.RenderDrawData(
+            draw_data,
+            command_buffer,
+            render_pass,
+            nil,
+        )
+
+        sdl.EndGPURenderPass(render_pass)
+    }
+
+    io := imgui.GetIOImGuiContextPtr(state.imgui.ctx)
+    if .ViewportsEnable in io.ConfigFlags {
+        imgui.UpdatePlatformWindows()
+        imgui.RenderPlatformWindowsDefault()
     }
 
     ok = sdl.SubmitGPUCommandBuffer(command_buffer)

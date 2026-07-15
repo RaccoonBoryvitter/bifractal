@@ -4,9 +4,11 @@ import "base:runtime"
 import "core:log"
 import "core:math/rand"
 
+import imgui "deps:imgui"
+import imgui_impl_sdl3 "deps:imgui/imgui_impl_sdl3"
+import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
-import imgui "deps:imgui"
 
 init_window :: proc() -> ^sdl.Window {
     ok := sdl.Init({.VIDEO, .EVENTS})
@@ -17,17 +19,21 @@ init_window :: proc() -> ^sdl.Window {
 
     main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
     window := sdl.CreateWindow(
-        WINDOW_TITLE,
-        i32(f32(WINDOW_RESOLUTION.w) * main_scale), // I will eventually come up
-        i32(f32(WINDOW_RESOLUTION.h) * main_scale), // with a better solution
-        {.RESIZABLE, .HIGH_PIXEL_DENSITY},
+    WINDOW_TITLE,
+    i32(f32(WINDOW_RESOLUTION.w) * main_scale), // I will eventually come up
+    i32(f32(WINDOW_RESOLUTION.h) * main_scale), // with a better solution
+    {.RESIZABLE, .HIGH_PIXEL_DENSITY},
     )
     if window == nil {
         log.errorf("unable to create SDL window: %s", sdl.GetError())
         return nil
     }
 
-    sdl.SetWindowPosition(window, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED)
+    sdl.SetWindowPosition(
+        window,
+        sdl.WINDOWPOS_CENTERED,
+        sdl.WINDOWPOS_CENTERED,
+    )
 
     return window
 }
@@ -116,13 +122,57 @@ init_app :: proc(ctx: runtime.Context) -> ^App_State {
     state.gpu_vram_bytes =
         compute_texture_size +
         ui_texture_size +
-        ui_buffer_size + // vertex buffer
-        ui_buffer_size // transfer buffer
+        ui_buffer_size +
+        ui_buffer_size // vertex buffer// transfer buffer
 
     state.rand_state = rand.create_u64(42)
     state.fps_last_ticks = sdl.GetTicks()
 
     imgui.CHECKVERSION()
+    state.imgui = { }
+    state.imgui.ctx = imgui.CreateContext()
+    imgui_io := imgui.GetIOImGuiContextPtr(state.imgui.ctx)
+    imgui_io.ConfigFlags += {
+        .NavEnableKeyboard,
+        .DockingEnable,
+        .ViewportsEnable,
+    }
+
+    system_theme := sdl.GetSystemTheme()
+    switch system_theme {
+    case .UNKNOWN:
+        imgui.StyleColorsClassic()
+    case .DARK:
+        imgui.StyleColorsDark()
+    case .LIGHT:
+        imgui.StyleColorsLight()
+    }
+
+    imgui_style := imgui.GetStyle()
+    main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
+    imgui.Style_ScaleAllSizes(imgui_style, main_scale)
+    imgui_style.FontScaleDpi = main_scale
+    imgui_io.ConfigDpiScaleFonts = true
+    imgui_io.ConfigDpiScaleViewports = true
+
+    if .ViewportsEnable in imgui_io.ConfigFlags {
+        imgui_style.WindowRounding = 0
+        imgui_style.Colors[imgui.Col.WindowBg].w = 1
+    }
+
+    imgui_impl_sdl3.InitForSDLGPU(state.window)
+
+    init_info := imgui_impl_sdlgpu3.InitInfo {
+        Device               = state.gpu.device,
+        ColorTargetFormat    = sdl.GetGPUSwapchainTextureFormat(
+            state.gpu.device,
+            state.window,
+        ),
+        MSAASamples          = ._1,
+        SwapchainComposition = .SDR,
+        PresentMode          = .VSYNC,
+    }
+    imgui_impl_sdlgpu3.Init(&init_info)
 
     return state
 }

@@ -4,6 +4,7 @@ import "base:runtime"
 
 import "core:math/rand"
 
+import imgui "deps:imgui"
 import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
@@ -59,6 +60,10 @@ Resolution :: struct {
     w, h: u32,
 }
 
+ImGui_Resources :: struct {
+    ctx: ^imgui.Context,
+}
+
 App_State :: struct {
     ctx:                  runtime.Context,
     window:               ^sdl.Window,
@@ -77,4 +82,5 @@ App_State :: struct {
     fps_last_ticks:       u64,
     fps_current:          f32,
     gpu_vram_bytes:       u64,
+    imgui:                ImGui_Resources,
 }
