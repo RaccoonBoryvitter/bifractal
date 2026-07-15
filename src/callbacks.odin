@@ -17,7 +17,7 @@ SDL_AppInit :: proc "c" (
     argv: [^]cstring,
 ) -> sdl.AppResult {
     context = runtime.default_context()
-    state := init_app(context)
+    state := init_app()
     if state == nil {
         return .FAILURE
     }

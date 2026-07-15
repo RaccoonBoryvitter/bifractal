@@ -63,9 +63,7 @@ init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
     return gpu_device
 }
 
-init_app :: proc(ctx: runtime.Context) -> ^App_State {
-    context = ctx
-
+init_app :: proc() -> ^App_State {
     state := new(App_State)
     state.ctx = context
     context.logger = log.create_console_logger()

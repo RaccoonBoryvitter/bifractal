@@ -1,8 +1,4 @@
-#+feature dynamic-literals
 package main
-
-import mu "vendor:microui"
-import sdl "vendor:sdl3"
 
 // Window configuration
 WINDOW_TITLE :: "Odin Zoom"
@@ -13,8 +9,6 @@ WINDOW_RESOLUTION :: Resolution {
 
 // Shader paths
 MANDELBROT_SHADER_PATH :: "../assets/shaders/compiled/mandelbrot.spv"
-UI_VERTEX_SHADER_PATH :: "../assets/shaders/compiled/ui.vert.spv"
-UI_FRAGMENT_SHADER_PATH :: "../assets/shaders/compiled/ui.frag.spv"
 
 // UI configuration
 MAX_UI_VERTICES :: 65536
@@ -44,29 +38,6 @@ FRACTAL_DEFAULT_MAX_ITER :: 256
 PALETTE_SWATCH_STEPS :: 64
 PALETTE_PRESET_SWATCH_STEPS :: 16
 PALETTE_SWATCH_WIDTH :: 64
-
-// SDL3+microui keyboard mappings
-sdl_ui_key_map := map[sdl.Keycode]mu.Key {
-    sdl.K_LSHIFT    = .SHIFT,
-    sdl.K_RSHIFT    = .SHIFT,
-    sdl.K_LCTRL     = .CTRL,
-    sdl.K_RCTRL     = .CTRL,
-    sdl.K_LGUI      = .CTRL,
-    sdl.K_RGUI      = .CTRL,
-    sdl.K_LALT      = .ALT,
-    sdl.K_RALT      = .ALT,
-    sdl.K_BACKSPACE = .BACKSPACE,
-    sdl.K_DELETE    = .DELETE,
-    sdl.K_RETURN    = .RETURN,
-    sdl.K_LEFT      = .LEFT,
-    sdl.K_RIGHT     = .RIGHT,
-    sdl.K_HOME      = .HOME,
-    sdl.K_END       = .END,
-    sdl.K_A         = .A,
-    sdl.K_X         = .X,
-    sdl.K_C         = .C,
-    sdl.K_V         = .V,
-}
 
 palette_presets := [?]Palette_Preset {
     {

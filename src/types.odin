@@ -5,7 +5,6 @@ import "base:runtime"
 import "core:math/rand"
 
 import imgui "deps:imgui"
-import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
 Gpu_Resources :: struct {
@@ -73,7 +72,6 @@ App_State :: struct {
     gpu_driver:           string,
     mouse_complex:        complex64,
     fractal:              Fractal_State,
-    ui_context:           mu.Context,
     palette_banded:       bool,
     palette_snapshot:     Palette_Preset,
     palette_has_snapshot: bool,
