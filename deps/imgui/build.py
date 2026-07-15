@@ -22,8 +22,7 @@ imgui_version = "v1.92.8-docking"
 # Note - tested with Odin version `dev-2026-07`
 
 # @CONFIGURE: Elements must be keys into below table
-wanted_backends = ["vulkan", "sdl2", "sdl3", "sdlrenderer3", "sdlgpu3", "opengl3", "glfw",
-				   "dx11", "dx12", "osx", "metal", "null", "wgpu", "webgl"]
+wanted_backends = ["sdl3", "sdlgpu3"]
 # Supported means that an impl bindings file exists, and that it has been tested.
 # Some backends (like dx12, win32) have bindings but not been tested.
 backends = {
