@@ -1,3 +1,0 @@
-[submodule "deps/imgui"]
-	path = deps/imgui
-	url = https://gitlab.com/L-4/odin-imgui.git
