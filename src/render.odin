@@ -7,11 +7,11 @@ import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
 
 import sdl "vendor:sdl3"
 
-render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
+render_frame :: proc(state: ^App_State) -> sdl.AppResult {
     command_buffer := sdl.AcquireGPUCommandBuffer(state.gpu.device)
 
     storage_texture_bindings := [1]sdl.GPUStorageTextureReadWriteBinding {
-        {texture = state.gpu.texture},
+        {texture = state.gpu.texture, cycle = true},
     }
     compute_pass := sdl.BeginGPUComputePass(
         command_buffer,
@@ -34,22 +34,6 @@ render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
         1,
     )
     sdl.EndGPUComputePass(compute_pass)
-
-    if vertex_count > 0 {
-        ui_copy_pass := sdl.BeginGPUCopyPass(command_buffer)
-        sdl.UploadToGPUBuffer(
-            ui_copy_pass,
-            sdl.GPUTransferBufferLocation {
-                transfer_buffer = state.gpu.ui_transfer_buffer,
-            },
-            sdl.GPUBufferRegion {
-                buffer = state.gpu.ui_vertex_buffer,
-                size = u32(vertex_count * size_of(Ui_Vertex)),
-            },
-            false,
-        )
-        sdl.EndGPUCopyPass(ui_copy_pass)
-    }
 
     swapchain_texture: ^sdl.GPUTexture
     width, height: u32
@@ -98,56 +82,11 @@ render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
                 x = 0,
                 y = 0,
             },
-            load_op = .DONT_CARE,
+            load_op = .CLEAR,
+            clear_color = {0, 0, 0, 1},
             filter = .LINEAR,
         },
     )
-
-    if vertex_count > 0 {
-        color_target := sdl.GPUColorTargetInfo {
-            texture  = swapchain_texture,
-            load_op  = .LOAD,
-            store_op = .STORE,
-        }
-        render_pass := sdl.BeginGPURenderPass(
-            command_buffer,
-            &color_target,
-            1,
-            nil,
-        )
-        sdl.BindGPUGraphicsPipeline(render_pass, state.gpu.ui_pipeline)
-
-        globals := Ui_Globals {
-            screen_size = {f32(width), f32(height)},
-        }
-        sdl.PushGPUVertexUniformData(
-            command_buffer,
-            0,
-            &globals,
-            size_of(Ui_Globals),
-        )
-
-        buf_binding := [1]sdl.GPUBufferBinding {
-            {buffer = state.gpu.ui_vertex_buffer},
-        }
-        sdl.BindGPUVertexBuffers(render_pass, 0, raw_data(buf_binding[:]), 1)
-
-        tex_binding := [1]sdl.GPUTextureSamplerBinding {
-            {
-                texture = state.gpu.ui_font_texture,
-                sampler = state.gpu.ui_font_sampler,
-            },
-        }
-        sdl.BindGPUFragmentSamplers(
-            render_pass,
-            0,
-            raw_data(tex_binding[:]),
-            1,
-        )
-
-        sdl.DrawGPUPrimitives(render_pass, u32(vertex_count), 1, 0, 0)
-        sdl.EndGPURenderPass(render_pass)
-    }
 
     imgui.Render()
     draw_data := imgui.GetDrawData()
@@ -158,9 +97,9 @@ render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
         imgui_impl_sdlgpu3.PrepareDrawData(draw_data, command_buffer)
 
         target_info := sdl.GPUColorTargetInfo {
-            texture     = swapchain_texture,
-            load_op     = .LOAD,
-            store_op    = .STORE,
+            texture  = swapchain_texture,
+            load_op  = .LOAD,
+            store_op = .STORE,
         }
         render_pass := sdl.BeginGPURenderPass(
             command_buffer,
@@ -176,12 +115,6 @@ render_frame :: proc(state: ^App_State, vertex_count: int) -> sdl.AppResult {
         )
 
         sdl.EndGPURenderPass(render_pass)
-    }
-
-    io := imgui.GetIOImGuiContextPtr(state.imgui.ctx)
-    if .ViewportsEnable in io.ConfigFlags {
-        imgui.UpdatePlatformWindows()
-        imgui.RenderPlatformWindowsDefault()
     }
 
     ok = sdl.SubmitGPUCommandBuffer(command_buffer)

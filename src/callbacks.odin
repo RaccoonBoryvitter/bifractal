@@ -4,7 +4,6 @@ import "base:runtime"
 import "core:c"
 import "core:log"
 
-import mu "vendor:microui"
 import sdl "vendor:sdl3"
 
 import imgui "deps:imgui"
@@ -32,10 +31,8 @@ SDL_AppEvent :: proc "c" (
     appstate: rawptr,
     event: ^sdl.Event,
 ) -> sdl.AppResult {
+    context = runtime.default_context()
     state := (^App_State)(appstate)
-    context = state.ctx
-
-    handle_ui_events(event, state)
 
     imgui_impl_sdl3.ProcessEvent(event)
 
@@ -46,15 +43,17 @@ SDL_AppEvent :: proc "c" (
         return .CONTINUE
     }
 
-    // Fractal input handling
-    is_hover_active := state.ui_context.hover_root != nil || imgui.IsAnyItemHovered()
+    io := imgui.GetIOImGuiContextPtr(state.imgui.ctx)
+    is_mouse_captured := io.WantCaptureMouse || imgui.IsAnyItemHovered()
     fractal_result := handle_fractal_events(
         event,
         &state.fractal,
         state.gpu.device,
         &state.window_resolution,
         &state.gpu.texture,
-        is_hover_active,
+        state.window,
+        is_mouse_captured,
+        io.WantCaptureKeyboard,
     )
     if fractal_result != .CONTINUE {
         return fractal_result
@@ -78,28 +77,26 @@ fps_update :: proc(state: ^App_State) {
 
 @(export)
 SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
-    state := (^App_State)(appstate)
-    context = state.ctx
+    context = runtime.default_context()
     defer free_all(context.temp_allocator)
 
-    fps_update(state)
-    create_ui(state)
-    vertex_count := handle_mu_commands(state)
+    state := (^App_State)(appstate)
 
-    imgui_impl_sdlgpu3.NewFrame()
+    fps_update(state)
+
     imgui_impl_sdl3.NewFrame()
+    imgui_impl_sdlgpu3.NewFrame()
     imgui.NewFrame()
 
-    imgui.ShowDemoWindow()
-    imgui.EndFrame()
+    create_imgui_ui(state)
 
-    return render_frame(state, vertex_count)
+    return render_frame(state)
 }
 
 @(export)
 SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
+    context = runtime.default_context()
     state := (^App_State)(appstate)
-    context = state.ctx
 
     imgui_impl_sdlgpu3.Shutdown()
     imgui_impl_sdl3.Shutdown()
@@ -108,14 +105,15 @@ SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     sdl.DestroyCursor(state.fractal.move_cursor)
     sdl.DestroyCursor(state.fractal.default_cursor)
 
-    sdl.ReleaseGPUBuffer(state.gpu.device, state.gpu.ui_vertex_buffer)
-    sdl.ReleaseGPUTransferBuffer(
-        state.gpu.device,
-        state.gpu.ui_transfer_buffer,
-    )
-    sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.ui_font_texture)
-    sdl.ReleaseGPUSampler(state.gpu.device, state.gpu.ui_font_sampler)
-    sdl.ReleaseGPUGraphicsPipeline(state.gpu.device, state.gpu.ui_pipeline)
+    // microui UI resources disabled
+    // sdl.ReleaseGPUBuffer(state.gpu.device, state.gpu.ui_vertex_buffer)
+    // sdl.ReleaseGPUTransferBuffer(
+    //     state.gpu.device,
+    //     state.gpu.ui_transfer_buffer,
+    // )
+    // sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.ui_font_texture)
+    // sdl.ReleaseGPUSampler(state.gpu.device, state.gpu.ui_font_sampler)
+    // sdl.ReleaseGPUGraphicsPipeline(state.gpu.device, state.gpu.ui_pipeline)
 
     sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
     sdl.ReleaseGPUComputePipeline(state.gpu.device, state.gpu.compute_pipeline)

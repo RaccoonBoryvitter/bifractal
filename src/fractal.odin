@@ -21,6 +21,17 @@ screen_to_complex :: proc(
     )
 }
 
+get_window_pixel_scale :: proc(window: ^sdl.Window) -> [2]f32 {
+    logical_w, logical_h: i32
+    pixel_w, pixel_h: i32
+    sdl.GetWindowSize(window, &logical_w, &logical_h)
+    sdl.GetWindowSizeInPixels(window, &pixel_w, &pixel_h)
+    if logical_w <= 0 || logical_h <= 0 {
+        return {1, 1}
+    }
+    return {f32(pixel_w) / f32(logical_w), f32(pixel_h) / f32(logical_h)}
+}
+
 reset_fractal_view :: proc(uniform: ^Fractal_Uniform, zoom_level: ^f32) {
     uniform.zoom = FRACTAL_DEFAULT_ZOOM
     zoom_level^ = math.log2(uniform.zoom)
@@ -76,20 +87,24 @@ handle_fractal_events :: proc(
     gpu_device: ^sdl.GPUDevice,
     resolution: ^Resolution,
     gpu_texture: ^^sdl.GPUTexture,
-    is_hover_active: bool,
+    window: ^sdl.Window,
+    is_mouse_captured: bool,
+    want_capture_keyboard: bool,
 ) -> sdl.AppResult {
     #partial switch event.type {
     case .QUIT, .WINDOW_CLOSE_REQUESTED:
         return .SUCCESS
     case .KEY_DOWN:
-        handle_fractal_keyboard_input(
-            &fractal.uniform,
-            &fractal.zoom_level,
-            event.key.key,
-        )
+        if !want_capture_keyboard {
+            handle_fractal_keyboard_input(
+                &fractal.uniform,
+                &fractal.zoom_level,
+                event.key.key,
+            )
+        }
     case .MOUSE_WHEEL:
-        if !is_hover_active {
-            handle_fractal_zoom(fractal, event, resolution^)
+        if !is_mouse_captured {
+            handle_fractal_zoom(fractal, event, resolution^, window)
         }
     case .MOUSE_BUTTON_UP:
         if event.button.button == sdl.BUTTON_LEFT {
@@ -97,13 +112,14 @@ handle_fractal_events :: proc(
         }
     case .MOUSE_BUTTON_DOWN:
         if event.button.button == sdl.BUTTON_LEFT {
-            return start_fractal_drag(fractal, is_hover_active)
+            return start_fractal_drag(fractal, is_mouse_captured)
         }
     case .MOUSE_MOTION:
-        handle_fractal_drag(fractal, event, is_hover_active, resolution^)
-    case .WINDOW_PIXEL_SIZE_CHANGED:
+        handle_fractal_drag(fractal, event, window, is_mouse_captured, resolution^)
+    case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
         handle_resize(
             event,
+            window,
             gpu_device,
             resolution,
             &fractal.uniform.resolution,
@@ -117,15 +133,22 @@ handle_fractal_events :: proc(
 @(private = "file")
 handle_resize :: proc(
     event: ^sdl.Event,
+    main_window: ^sdl.Window,
     device: ^sdl.GPUDevice,
     resolution: ^Resolution,
     uniform_resolution: ^[2]f32,
     texture: ^^sdl.GPUTexture,
 ) {
-    event_window := event.window
-    resolution.w = u32(event_window.data1)
-    resolution.h = u32(event_window.data2)
-    uniform_resolution^ = {f32(event_window.data1), f32(event_window.data2)}
+    if event.window.windowID != sdl.GetWindowID(main_window) {
+        return
+    }
+
+    pixel_w, pixel_h: i32
+    sdl.GetWindowSizeInPixels(main_window, &pixel_w, &pixel_h)
+
+    resolution.w = u32(pixel_w)
+    resolution.h = u32(pixel_h)
+    uniform_resolution^ = {f32(pixel_w), f32(pixel_h)}
 
     sdl.ReleaseGPUTexture(device, texture^)
     texture^ = create_output_texture(device, resolution^)
@@ -166,9 +189,13 @@ handle_fractal_zoom :: proc(
     fractal: ^Fractal_State,
     event: ^sdl.Event,
     resolution: Resolution,
+    window: ^sdl.Window,
 ) {
     mouse_x, mouse_y: f32
     _ = sdl.GetMouseState(&mouse_x, &mouse_y)
+    scale := get_window_pixel_scale(window)
+    mouse_x *= scale.x
+    mouse_y *= scale.y
 
     w := f32(resolution.w)
     h := f32(resolution.h)
@@ -198,28 +225,30 @@ handle_fractal_zoom :: proc(
 handle_fractal_drag :: proc(
     fractal: ^Fractal_State,
     event: ^sdl.Event,
-    is_hover_active: bool,
+    window: ^sdl.Window,
+    is_mouse_captured: bool,
     resolution: Resolution,
 ) {
-    if !fractal.is_dragging || is_hover_active {
+    if !fractal.is_dragging || is_mouse_captured {
         return
     }
 
-    dx := f32(event.motion.xrel)
-    dy := f32(event.motion.yrel)
-    scale :=
+    scale := get_window_pixel_scale(window)
+    dx := f32(event.motion.xrel) * scale.x
+    dy := f32(event.motion.yrel) * scale.y
+    drag_scale :=
         FRACTAL_MOUSE_DRAG_SCALE / (f32(resolution.h) * fractal.uniform.zoom)
 
-    fractal.uniform.center.x -= dx * scale
-    fractal.uniform.center.y -= dy * scale
+    fractal.uniform.center.x -= dx * drag_scale
+    fractal.uniform.center.y -= dy * drag_scale
 }
 
 @(private = "file")
 start_fractal_drag :: proc(
     fractal: ^Fractal_State,
-    is_hover_active: bool,
+    is_mouse_captured: bool,
 ) -> sdl.AppResult {
-    if is_hover_active {
+    if is_mouse_captured {
         return .CONTINUE
     }
 

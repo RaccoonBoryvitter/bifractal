@@ -30,17 +30,9 @@ UiLayout :: struct {
 create_imgui_ui :: proc(state: ^App_State) {
     defer free_all(context.temp_allocator)
 
-    margin: f32 = 10
-    panel_w := clamp(f32(state.window_resolution.w) * 0.22, 280, 420)
-    panel_h := f32(state.window_resolution.h) - margin * 2
+    imgui.SetNextWindowSize({360, 600}, .FirstUseEver)
 
-    imgui.SetNextWindowPos(
-        {f32(state.window_resolution.w) - panel_w - margin, margin},
-        .Always,
-    )
-    imgui.SetNextWindowSize({panel_w, panel_h}, .Always)
-
-    if !imgui.Begin("Sidebar", nil, {.NoResize, .NoMove, .NoCollapse, .NoSavedSettings}) {
+    if !imgui.Begin("Sidebar", nil, {.NoSavedSettings}) {
         imgui.End()
         return
     }
@@ -59,9 +51,10 @@ create_imgui_ui :: proc(state: ^App_State) {
 
         mouse_x, mouse_y: f32
         _ = sdl.GetMouseState(&mouse_x, &mouse_y)
+        scale := get_window_pixel_scale(state.window)
         state.mouse_complex = screen_to_complex(
-            mouse_x,
-            mouse_y,
+            mouse_x * scale.x,
+            mouse_y * scale.y,
             state.window_resolution,
             state.fractal.uniform.center,
             state.fractal.uniform.zoom,
