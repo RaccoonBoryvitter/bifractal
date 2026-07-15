@@ -12,7 +12,11 @@ import sdl "vendor:sdl3"
 init_window :: proc() -> ^sdl.Window {
     ok := sdl.Init({.VIDEO, .EVENTS})
     if !ok {
-        log.errorf("unable to initialize SDL: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.ERROR),
+            "unable to initialize SDL: %s",
+            sdl.GetError(),
+        )
         return nil
     }
 
@@ -24,7 +28,11 @@ init_window :: proc() -> ^sdl.Window {
         {.RESIZABLE, .HIGH_PIXEL_DENSITY},
     )
     if window == nil {
-        log.errorf("unable to create SDL window: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.ERROR),
+            "unable to create SDL window: %s",
+            sdl.GetError(),
+        )
         return nil
     }
 
@@ -40,36 +48,75 @@ init_window :: proc() -> ^sdl.Window {
 init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
     gpu_device := sdl.CreateGPUDevice({.SPIRV, .DXIL, .MSL}, true, nil)
     if gpu_device == nil {
-        log.errorf("unable to create SDL GPU device: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.ERROR),
+            "unable to create SDL GPU device: %s",
+            sdl.GetError(),
+        )
         return nil
     }
 
     ok := sdl.ClaimWindowForGPUDevice(gpu_device, window)
     if !ok {
-        log.errorf("unable to claim window for GPU device: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.ERROR),
+            "unable to claim window for GPU device: %s",
+            sdl.GetError(),
+        )
         return nil
     }
 
     ok = sdl.SetGPUSwapchainParameters(gpu_device, window, .SDR, .VSYNC)
     if !ok {
-        log.warnf("unable to set swapchain parameters: %s", sdl.GetError())
+        sdl.LogWarn(
+            i32(sdl.LogCategory.RENDER),
+            "unable to set swapchain parameters: %s",
+            sdl.GetError(),
+        )
     }
 
     ok = sdl.SetGPUAllowedFramesInFlight(gpu_device, 2)
     if !ok {
-        log.warnf("unable to set frames in flight: %s", sdl.GetError())
+        sdl.LogWarn(
+            i32(sdl.LogCategory.RENDER),
+            "unable to set frames in flight: %s",
+            sdl.GetError(),
+        )
     }
 
     return gpu_device
 }
 
+create_app_logger :: proc() -> log.Logger {
+    when ODIN_DEBUG {
+        return log.create_console_logger(.Debug)
+    } else {
+        return log.create_console_logger(.Info)
+    }
+}
+
 init_app :: proc() -> ^App_State {
     state := new(App_State)
-    state.ctx = context
-    context.logger = log.create_console_logger()
+    state.logger = create_app_logger()
+    context.logger = state.logger
+
+    sdl.SetLogOutputFunction(sdl_log_callback, &state.logger)
+    when ODIN_DEBUG {
+        sdl.SetLogPriorities(.DEBUG)
+    } else {
+        sdl.SetLogPriorities(.INFO)
+    }
+
+    ok := true
+    defer if !ok {
+        sdl.SetLogOutputFunction(sdl.GetDefaultLogOutputFunction(), nil)
+        log.destroy_console_logger(state.logger)
+        free(state)
+    }
 
     state.window = init_window()
     if state.window == nil {
+        ok = false
         return nil
     }
 
@@ -81,6 +128,7 @@ init_app :: proc() -> ^App_State {
 
     state.gpu.device = init_gpu(state.window)
     if state.gpu.device == nil {
+        ok = false
         return nil
     }
 
@@ -94,11 +142,12 @@ init_app :: proc() -> ^App_State {
     )
     state.gpu_driver = string(sdl.GetGPUDeviceDriver(state.gpu.device))
 
-    pipeline, texture, ok := init_fractal_compute(
+    pipeline, texture, init_ok := init_fractal_compute(
         state.gpu.device,
         state.window_resolution,
     )
-    if !ok {
+    if !init_ok {
+        ok = false
         return nil
     }
     state.gpu.compute_pipeline = pipeline

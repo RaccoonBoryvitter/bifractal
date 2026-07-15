@@ -10,6 +10,37 @@ import imgui "deps:imgui"
 import imgui_impl_sdl3 "deps:imgui/imgui_impl_sdl3"
 import imgui_impl_sdlgpu3 "deps:imgui/imgui_impl_sdlgpu3"
 
+sdl_log_callback :: proc "c" (
+    userdata: rawptr,
+    category: sdl.LogCategory,
+    priority: sdl.LogPriority,
+    message: cstring,
+) {
+    context = runtime.default_context()
+    logger := (^log.Logger)(userdata)
+    if logger == nil || logger.procedure == nil {
+        return
+    }
+
+    level: log.Level
+    switch priority {
+    case .INVALID:
+        level = .Debug
+    case .TRACE, .VERBOSE, .DEBUG:
+        level = .Debug
+    case .INFO:
+        level = .Info
+    case .WARN:
+        level = .Warning
+    case .ERROR:
+        level = .Error
+    case .CRITICAL:
+        level = .Fatal
+    }
+
+    logger.procedure(logger.data, level, string(message), logger.options)
+}
+
 @(export)
 SDL_AppInit :: proc "c" (
     appstate: ^rawptr,
@@ -21,6 +52,7 @@ SDL_AppInit :: proc "c" (
     if state == nil {
         return .FAILURE
     }
+    context.logger = state.logger
 
     appstate^ = rawptr(state)
     return .CONTINUE
@@ -33,6 +65,7 @@ SDL_AppEvent :: proc "c" (
 ) -> sdl.AppResult {
     context = runtime.default_context()
     state := (^App_State)(appstate)
+    context.logger = state.logger
 
     imgui_impl_sdl3.ProcessEvent(event)
 
@@ -81,6 +114,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     defer free_all(context.temp_allocator)
 
     state := (^App_State)(appstate)
+    context.logger = state.logger
 
     fps_update(state)
 
@@ -97,6 +131,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     context = runtime.default_context()
     state := (^App_State)(appstate)
+    context.logger = state.logger
 
     imgui_impl_sdlgpu3.Shutdown()
     imgui_impl_sdl3.Shutdown()
@@ -105,23 +140,14 @@ SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     sdl.DestroyCursor(state.fractal.move_cursor)
     sdl.DestroyCursor(state.fractal.default_cursor)
 
-    // microui UI resources disabled
-    // sdl.ReleaseGPUBuffer(state.gpu.device, state.gpu.ui_vertex_buffer)
-    // sdl.ReleaseGPUTransferBuffer(
-    //     state.gpu.device,
-    //     state.gpu.ui_transfer_buffer,
-    // )
-    // sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.ui_font_texture)
-    // sdl.ReleaseGPUSampler(state.gpu.device, state.gpu.ui_font_sampler)
-    // sdl.ReleaseGPUGraphicsPipeline(state.gpu.device, state.gpu.ui_pipeline)
-
     sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
     sdl.ReleaseGPUComputePipeline(state.gpu.device, state.gpu.compute_pipeline)
 
     sdl.DestroyGPUDevice(state.gpu.device)
     sdl.DestroyWindow(state.window)
+    sdl.SetLogOutputFunction(sdl.GetDefaultLogOutputFunction(), nil)
     sdl.Quit()
 
-    log.destroy_console_logger(context.logger)
+    log.destroy_console_logger(state.logger)
     free(state)
 }

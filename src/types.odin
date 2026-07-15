@@ -2,6 +2,7 @@ package main
 
 import "base:runtime"
 
+import "core:log"
 import "core:math/rand"
 
 import imgui "deps:imgui"
@@ -64,9 +65,9 @@ ImGui_Resources :: struct {
 }
 
 App_State :: struct {
-    ctx:                  runtime.Context,
     window:               ^sdl.Window,
     window_resolution:    Resolution,
+    logger:               log.Logger,
     gpu:                  Gpu_Resources,
     gpu_name:             string,
     gpu_driver:           string,

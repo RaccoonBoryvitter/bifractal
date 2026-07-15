@@ -70,7 +70,11 @@ init_fractal_compute :: proc(
 ) {
     compute_pipeline = create_compute_pipeline(device, "mandelbrot")
     if compute_pipeline == nil {
-        log.errorf("unable to create GPU compute pipeline: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.RENDER),
+            "unable to create GPU compute pipeline: %s",
+            sdl.GetError(),
+        )
         return
     }
 
@@ -115,7 +119,13 @@ handle_fractal_events :: proc(
             return start_fractal_drag(fractal, is_mouse_captured)
         }
     case .MOUSE_MOTION:
-        handle_fractal_drag(fractal, event, window, is_mouse_captured, resolution^)
+        handle_fractal_drag(
+            fractal,
+            event,
+            window,
+            is_mouse_captured,
+            resolution^,
+        )
     case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
         handle_resize(
             event,
@@ -255,7 +265,11 @@ start_fractal_drag :: proc(
     fractal.is_dragging = true
     ok := sdl.SetCursor(fractal.move_cursor)
     if !ok {
-        log.errorf("unable to set move cursor: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.APPLICATION),
+            "unable to set move cursor: %s",
+            sdl.GetError(),
+        )
         return .FAILURE
     }
     return .CONTINUE
@@ -266,7 +280,11 @@ end_fractal_drag :: proc(fractal: ^Fractal_State) -> sdl.AppResult {
     fractal.is_dragging = false
     ok := sdl.SetCursor(fractal.default_cursor)
     if !ok {
-        log.errorf("unable to set default cursor: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.APPLICATION),
+            "unable to set default cursor: %s",
+            sdl.GetError(),
+        )
         return .FAILURE
     }
     return .CONTINUE

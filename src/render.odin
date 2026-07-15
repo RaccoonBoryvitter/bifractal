@@ -46,13 +46,18 @@ render_frame :: proc(state: ^App_State) -> sdl.AppResult {
         &height,
     )
     if !ok {
-        log.errorf("unable to acquire swapchain texture: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.RENDER),
+            "unable to acquire swapchain texture: %s",
+            sdl.GetError(),
+        )
         return .FAILURE
     }
     if swapchain_texture == nil {
         ok = sdl.SubmitGPUCommandBuffer(command_buffer)
         if !ok {
-            log.errorf(
+            sdl.LogError(
+                i32(sdl.LogCategory.RENDER),
                 "unable to submit GPU command buffer: %s",
                 sdl.GetError(),
             )
@@ -119,7 +124,11 @@ render_frame :: proc(state: ^App_State) -> sdl.AppResult {
 
     ok = sdl.SubmitGPUCommandBuffer(command_buffer)
     if !ok {
-        log.errorf("unable to submit GPU command buffer: %s", sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.RENDER),
+            "unable to submit GPU command buffer: %s",
+            sdl.GetError(),
+        )
         return .FAILURE
     }
 

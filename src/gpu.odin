@@ -21,7 +21,12 @@ create_shader :: proc(
     size: uint
     code := sdl.LoadFile(filepath, &size)
     if code == nil {
-        log.errorf("failed to load shader %s: %s", filepath, sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.RENDER),
+            "failed to load shader %s: %s",
+            filepath,
+            sdl.GetError(),
+        )
         return nil
     }
     defer sdl.free(code)
@@ -42,7 +47,12 @@ create_shader :: proc(
     )
 
     if shader == nil {
-        log.errorf("failed to create shader %s: %s", filepath, sdl.GetError())
+        sdl.LogError(
+            i32(sdl.LogCategory.RENDER),
+            "failed to create shader %s: %s",
+            filepath,
+            sdl.GetError(),
+        )
     }
 
     return shader
@@ -90,11 +100,13 @@ create_compute_pipeline :: proc(
     )
 
     if compute_pipeline == nil {
-        log.errorf(
+        sdl.LogError(
+            i32(sdl.LogCategory.RENDER),
             "failed to create compute pipeline \"%s\": %s",
             filepath,
             sdl.GetError(),
         )
+
     }
 
     return compute_pipeline
