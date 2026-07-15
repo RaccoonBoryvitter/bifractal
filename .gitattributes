@@ -5,3 +5,6 @@
 *.spv binary
 *.dxil binary
 *.metal text eol=lf
+
+# Treat vendored subtree files as binary to preserve their exact bytes.
+deps/imgui/** -text
