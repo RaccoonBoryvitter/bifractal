@@ -5,18 +5,20 @@ cbuffer UniformBlock : register(b0, space2) {
     float  zoom;
     int    max_iter;
 
-    float4 palette_a;
-    float4 palette_b;
-    float4 palette_c;
-    float4 palette_d;
+    float4 palette_offset;
+    float4 palette_amplitude;
+    float4 palette_frequency;
+    float4 palette_phase;
 
     float2 resolution;
 };
-    
+
 static const float TWO_PI = 6.28318;
 
 float4 cosine_palette(float t) {
-    return palette_a + palette_b * cos(TWO_PI * (palette_c * t + palette_d));
+    return palette_offset +
+           palette_amplitude *
+           cos(TWO_PI * (palette_frequency * t + palette_phase));
 }
 
 [numthreads(8, 8, 1)]

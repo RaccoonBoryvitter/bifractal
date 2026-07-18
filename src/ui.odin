@@ -29,13 +29,16 @@ create_imgui_ui :: proc(state: ^App_Context) {
     // Navigation
     if im.CollapsingHeader("Navigation", {.DefaultOpen}) {
         im.Text(
-            fmt.ctprintf("Zoom: %s", format_zoom(state.fractal.params.zoom)),
+            fmt.ctprintf(
+                "Zoom: %s",
+                format_zoom(state.fractal.camera.view.zoom),
+            ),
         )
         im.Text(
             fmt.ctprintf(
                 "Center: %+.6f %+.6fi",
-                state.fractal.params.center.x,
-                state.fractal.params.center.y,
+                state.fractal.camera.view.center.x,
+                state.fractal.camera.view.center.y,
             ),
         )
 
@@ -43,11 +46,9 @@ create_imgui_ui :: proc(state: ^App_Context) {
         _ = sdl.GetMouseState(&mouse_x, &mouse_y)
         scale := get_window_pixel_scale(state.window.handle)
         state.ui.mouse_complex = view_screen_to_complex(
-            mouse_x * scale.x,
-            mouse_y * scale.y,
+            {mouse_x * scale.x, mouse_y * scale.y},
             state.window.size,
-            state.fractal.params.center,
-            state.fractal.params.zoom,
+            state.fractal.camera.view,
         )
         im.Text(
             fmt.ctprintf(
@@ -66,6 +67,7 @@ create_imgui_ui :: proc(state: ^App_Context) {
 
         if im.Button("Reset View") {
             reset_fractal_view(
+                &state.fractal.camera.view,
                 &state.fractal.params,
                 &state.fractal.zoom_level,
             )
@@ -91,29 +93,45 @@ create_imgui_ui :: proc(state: ^App_Context) {
         )
 
         if im.Button("Mirror") {
-            mirror_palette(&state.fractal.params)
+            mirror_palette(&state.fractal.params.palette)
         }
         im.SameLine()
         if im.Button("Randomize") {
             randomize_palette(
-                &state.fractal.params,
+                &state.fractal.params.palette,
                 rand.default_random_generator(&state.palette.rand_state),
             )
         }
         im.SameLine()
         if im.Button("Rotate") {
-            rotate_palette(&state.fractal.params, 0.05)
+            rotate_palette(&state.fractal.params.palette, 0.05)
         }
 
-        im.ColorEdit4("a", &state.fractal.params.palette_a, {.NoAlpha})
-        im.ColorEdit4("b", &state.fractal.params.palette_b, {.NoAlpha})
-        im.ColorEdit4("c", &state.fractal.params.palette_c, {.NoAlpha})
-        im.ColorEdit4("d", &state.fractal.params.palette_d, {.NoAlpha})
+        im.ColorEdit4(
+            "Offset",
+            &state.fractal.params.palette.offset,
+            {.NoAlpha},
+        )
+        im.ColorEdit4(
+            "Amplitude",
+            &state.fractal.params.palette.amplitude,
+            {.NoAlpha},
+        )
+        im.ColorEdit4(
+            "Frequency",
+            &state.fractal.params.palette.frequency,
+            {.NoAlpha},
+        )
+        im.ColorEdit4(
+            "Phase",
+            &state.fractal.params.palette.phase,
+            {.NoAlpha},
+        )
 
         if im.CollapsingHeader("Presets", {}) {
             for preset in PALETTE_PRESETS {
                 if im.Button(fmt.ctprintf(preset.name)) {
-                    apply_palette_preset(&state.fractal.params, preset)
+                    apply_palette_preset(&state.fractal.params.palette, preset)
                 }
                 im.SameLine()
                 draw_preset_swatch(draw_list, preset)
@@ -156,24 +174,18 @@ draw_gradient_swatch :: proc(
     pos: im.Vec2,
     size: im.Vec2,
     banded: bool,
-    uniform: ^Fractal_Params,
+    params: ^Fractal_Params,
 ) {
     if banded {
         bands := clamp(
-            uniform.max_iter,
+            params.max_iter,
             FRACTAL_MIN_ITERATIONS,
             i32(PALETTE_SWATCH_STEPS),
         )
         step_w := size.x / f32(bands)
         for i in 0 ..< bands {
             t := f32(i) / f32(bands)
-            color := cosine_palette_cpu(
-                t,
-                uniform.palette_a,
-                uniform.palette_b,
-                uniform.palette_c,
-                uniform.palette_d,
-            )
+            color := cosine_palette_cpu(t, params.palette)
             col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
             x0 := pos.x + f32(i) * step_w
             x1 := x0 + step_w + 1
@@ -189,13 +201,7 @@ draw_gradient_swatch :: proc(
         step_w := size.x / f32(PALETTE_SWATCH_STEPS)
         for i in 0 ..< PALETTE_SWATCH_STEPS {
             t := f32(i) / f32(PALETTE_SWATCH_STEPS - 1)
-            color := cosine_palette_cpu(
-                t,
-                uniform.palette_a,
-                uniform.palette_b,
-                uniform.palette_c,
-                uniform.palette_d,
-            )
+            color := cosine_palette_cpu(t, params.palette)
             col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
             x0 := pos.x + f32(i) * step_w
             x1 := x0 + step_w + 1
@@ -219,7 +225,7 @@ draw_preset_swatch :: proc(draw_list: ^im.DrawList, preset: Palette_Preset) {
     step_w := size.x / f32(PALETTE_PRESET_SWATCH_STEPS)
     for i in 0 ..< PALETTE_PRESET_SWATCH_STEPS {
         t := f32(i) / f32(PALETTE_PRESET_SWATCH_STEPS - 1)
-        color := cosine_palette_cpu(t, preset.a, preset.b, preset.c, preset.d)
+        color := cosine_palette_cpu(t, preset.palette)
         col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
         x0 := pos.x + f32(i) * step_w
         x1 := x0 + step_w + 1

@@ -19,11 +19,12 @@ render_present_frame :: proc(state: ^App_Context) -> sdl.AppResult {
         0,
     )
     sdl.BindGPUComputePipeline(compute_pass, state.gpu.compute_pipeline)
+    uniform := fractal_make_uniform(&state.fractal)
     sdl.PushGPUComputeUniformData(
         command_buffer,
         0,
-        &state.fractal.params,
-        size_of(Fractal_Params),
+        &uniform,
+        size_of(Fractal_Uniform),
     )
     sdl.DispatchGPUCompute(
         compute_pass,

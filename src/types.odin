@@ -25,31 +25,47 @@ Gpu_Context :: struct {
     driver:           string,
 }
 
+Palette :: struct {
+    offset:    [4]f32,
+    amplitude: [4]f32,
+    frequency: [4]f32,
+    phase:     [4]f32,
+}
+
+Fractal_View :: struct {
+    center: [2]f32,
+    zoom:   f32,
+}
+
+Fractal_Camera :: struct {
+    view:        Fractal_View,
+    is_dragging: bool,
+    drag_start:  [2]f32,
+}
+
+Fractal_Params :: struct {
+    max_iter:      i32,
+    using palette: Palette,
+    resolution:    [2]f32,
+}
+
+Fractal_Uniform :: struct {
+    center:       [2]f32,
+    zoom:         f32,
+    using params: Fractal_Params,
+}
+
 Fractal :: struct {
+    camera:         Fractal_Camera,
     params:         Fractal_Params,
     zoom_level:     f32,
-    is_dragging:    bool,
     default_cursor: ^sdl.Cursor,
     move_cursor:    ^sdl.Cursor,
 }
 
-Fractal_Params :: struct {
-    center:     [2]f32,
-    zoom:       f32,
-    max_iter:   i32,
-    palette_a:  [4]f32,
-    palette_b:  [4]f32,
-    palette_c:  [4]f32,
-    palette_d:  [4]f32,
-    resolution: [2]f32,
-}
-
 Palette_Preset :: struct {
-    name: string,
-    a:    [4]f32,
-    b:    [4]f32,
-    c:    [4]f32,
-    d:    [4]f32,
+    name:          string,
+    using palette: Palette,
 }
 
 Palette_State :: struct {

@@ -8,10 +8,10 @@ struct type_UniformBlock
     float2 center;
     float zoom;
     int max_iter;
-    float4 palette_a;
-    float4 palette_b;
-    float4 palette_c;
-    float4 palette_d;
+    float4 palette_offset;
+    float4 palette_amplitude;
+    float4 palette_frequency;
+    float4 palette_phase;
     float2 resolution;
 };
 
@@ -67,7 +67,7 @@ kernel void main0(constant type_UniformBlock& UniformBlock [[buffer(0)]], textur
         float4 _132;
         if (_91)
         {
-            _132 = UniformBlock.palette_a + (UniformBlock.palette_b * cos(((UniformBlock.palette_c * (((float(_85) - log2(log2(dot(_82, _82)))) + 4.0) / float(_90))) + UniformBlock.palette_d) * 6.28318023681640625));
+            _132 = UniformBlock.palette_offset + (UniformBlock.palette_amplitude * cos(((UniformBlock.palette_frequency * (((float(_85) - log2(log2(dot(_82, _82)))) + 4.0) / float(_90))) + UniformBlock.palette_phase) * 6.28318023681640625));
         }
         else
         {

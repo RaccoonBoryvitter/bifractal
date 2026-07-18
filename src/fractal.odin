@@ -7,16 +7,15 @@ import sdl "vendor:sdl3"
 // Functions
 
 view_screen_to_complex :: proc(
-    screen_x, screen_y: f32,
-    resolution: Extent_2D,
-    center: [2]f32,
-    zoom: f32,
+    screen: [2]f32,
+    size: Extent_2D,
+    view: Fractal_View,
 ) -> complex64 {
-    w := f32(resolution.w)
-    h := f32(resolution.h)
+    w := f32(size.w)
+    h := f32(size.h)
     return complex(
-        (screen_x - w * 0.5) / (h * zoom) + center.x,
-        (screen_y - h * 0.5) / (h * zoom) + center.y,
+        (screen.x - w * 0.5) / (h * view.zoom) + view.center.x,
+        (screen.y - h * 0.5) / (h * view.zoom) + view.center.y,
     )
 }
 
@@ -31,11 +30,23 @@ get_window_pixel_scale :: proc(window: ^sdl.Window) -> [2]f32 {
     return {f32(pixel_w) / f32(logical_w), f32(pixel_h) / f32(logical_h)}
 }
 
-reset_fractal_view :: proc(uniform: ^Fractal_Params, zoom_level: ^f32) {
-    uniform.zoom = FRACTAL_DEFAULT_ZOOM
-    zoom_level^ = math.log2(uniform.zoom)
-    uniform.center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y}
-    uniform.max_iter = FRACTAL_DEFAULT_MAX_ITER
+reset_fractal_view :: proc(
+    view: ^Fractal_View,
+    params: ^Fractal_Params,
+    zoom_level: ^f32,
+) {
+    view.zoom = FRACTAL_DEFAULT_ZOOM
+    zoom_level^ = math.log2(view.zoom)
+    view.center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y}
+    params.max_iter = FRACTAL_DEFAULT_MAX_ITER
+}
+
+fractal_make_uniform :: proc(fractal: ^Fractal) -> Fractal_Uniform {
+    return Fractal_Uniform {
+        center = fractal.camera.view.center,
+        zoom = fractal.camera.view.zoom,
+        params = fractal.params,
+    }
 }
 
 // State management
@@ -43,15 +54,23 @@ reset_fractal_view :: proc(uniform: ^Fractal_Params, zoom_level: ^f32) {
 init_fractal_state :: proc(resolution: Extent_2D) -> Fractal {
     zoom := FRACTAL_DEFAULT_ZOOM
     return Fractal {
+        camera = {
+            view = {
+                center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y},
+                zoom = FRACTAL_DEFAULT_ZOOM,
+            },
+            is_dragging = false,
+            drag_start = {0, 0},
+        },
         params = {
-            center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y},
-            zoom = FRACTAL_DEFAULT_ZOOM,
             max_iter = FRACTAL_DEFAULT_MAX_ITER,
             resolution = {f32(resolution.w), f32(resolution.h)},
-            palette_a = {0.5, 0.5, 0.5, 0.0},
-            palette_b = {0.5, 0.5, 0.5, 0.0},
-            palette_c = {1.0, 1.0, 1.0, 0.0},
-            palette_d = {0.0, 0.10, 0.20, 0.0},
+            palette = {
+                offset = {0.5, 0.5, 0.5, 0.0},
+                amplitude = {0.5, 0.5, 0.5, 0.0},
+                frequency = {1.0, 1.0, 1.0, 0.0},
+                phase = {0.0, 0.10, 0.20, 0.0},
+            },
         },
         zoom_level = math.log2(f32(zoom)),
         default_cursor = sdl.CreateSystemCursor(.DEFAULT),
@@ -100,6 +119,7 @@ fractal_process_input :: proc(
     case .KEY_DOWN:
         if !want_capture_keyboard {
             handle_fractal_keyboard_input(
+                &fractal.camera.view,
                 &fractal.params,
                 &fractal.zoom_level,
                 event.key.key,
@@ -165,31 +185,32 @@ handle_resize :: proc(
 
 @(private = "file")
 handle_fractal_keyboard_input :: proc(
-    uniform: ^Fractal_Params,
+    view: ^Fractal_View,
+    params: ^Fractal_Params,
     zoom_level: ^f32,
     keycode: sdl.Keycode,
 ) {
     switch keycode {
     case sdl.K_W:
-        uniform.center.y -= FRACTAL_PAN_FACTOR / uniform.zoom
+        view.center.y -= FRACTAL_PAN_FACTOR / view.zoom
     case sdl.K_S:
-        uniform.center.y += FRACTAL_PAN_FACTOR / uniform.zoom
+        view.center.y += FRACTAL_PAN_FACTOR / view.zoom
     case sdl.K_A:
-        uniform.center.x -= FRACTAL_PAN_FACTOR / uniform.zoom
+        view.center.x -= FRACTAL_PAN_FACTOR / view.zoom
     case sdl.K_D:
-        uniform.center.x += FRACTAL_PAN_FACTOR / uniform.zoom
+        view.center.x += FRACTAL_PAN_FACTOR / view.zoom
     case sdl.K_Q:
-        uniform.max_iter -= FRACTAL_ITERATION_DECREASE_STEP
-        if uniform.max_iter < FRACTAL_MIN_ITERATIONS {
-            uniform.max_iter = FRACTAL_MIN_ITERATIONS
+        params.max_iter -= FRACTAL_ITERATION_DECREASE_STEP
+        if params.max_iter < FRACTAL_MIN_ITERATIONS {
+            params.max_iter = FRACTAL_MIN_ITERATIONS
         }
     case sdl.K_E:
-        uniform.max_iter += FRACTAL_ITERATION_STEP
-        if uniform.max_iter > FRACTAL_MAX_ITERATIONS {
-            uniform.max_iter = FRACTAL_MAX_ITERATIONS
+        params.max_iter += FRACTAL_ITERATION_STEP
+        if params.max_iter > FRACTAL_MAX_ITERATIONS {
+            params.max_iter = FRACTAL_MAX_ITERATIONS
         }
     case sdl.K_R:
-        reset_fractal_view(uniform, zoom_level)
+        reset_fractal_view(view, params, zoom_level)
     }
 }
 
@@ -203,31 +224,26 @@ handle_fractal_zoom :: proc(
     mouse_x, mouse_y: f32
     _ = sdl.GetMouseState(&mouse_x, &mouse_y)
     scale := get_window_pixel_scale(window)
-    mouse_x *= scale.x
-    mouse_y *= scale.y
+    mouse := [2]f32{mouse_x * scale.x, mouse_y * scale.y}
 
-    w := f32(resolution.w)
-    h := f32(resolution.h)
-    mouse_complex := [2]f32 {
-        (mouse_x - w * 0.5) / (h * fractal.params.zoom) +
-        fractal.params.center.x,
-        (mouse_y - h * 0.5) / (h * fractal.params.zoom) +
-        fractal.params.center.y,
-    }
+    mouse_complex := view_screen_to_complex(
+        mouse,
+        resolution,
+        fractal.camera.view,
+    )
 
     fractal.zoom_level += event.wheel.y * FRACTAL_ZOOM_SCROLL_FACTOR
     fractal.zoom_level = max(fractal.zoom_level, FRACTAL_MIN_ZOOM_LOG)
-    fractal.params.zoom = math.exp(fractal.zoom_level)
+    fractal.camera.view.zoom = math.exp(fractal.zoom_level)
 
-    new_mouse_complex := [2]f32 {
-        (mouse_x - w * 0.5) / (h * fractal.params.zoom) +
-        fractal.params.center.x,
-        (mouse_y - h * 0.5) / (h * fractal.params.zoom) +
-        fractal.params.center.y,
-    }
+    new_mouse_complex := view_screen_to_complex(
+        mouse,
+        resolution,
+        fractal.camera.view,
+    )
 
-    fractal.params.center.x += mouse_complex.x - new_mouse_complex.x
-    fractal.params.center.y += mouse_complex.y - new_mouse_complex.y
+    fractal.camera.view.center.x += real(mouse_complex) - real(new_mouse_complex)
+    fractal.camera.view.center.y += imag(mouse_complex) - imag(new_mouse_complex)
 }
 
 @(private = "file")
@@ -238,7 +254,7 @@ handle_fractal_drag :: proc(
     is_mouse_captured: bool,
     resolution: Extent_2D,
 ) {
-    if !fractal.is_dragging || is_mouse_captured {
+    if !fractal.camera.is_dragging || is_mouse_captured {
         return
     }
 
@@ -246,10 +262,10 @@ handle_fractal_drag :: proc(
     dx := f32(event.motion.xrel) * scale.x
     dy := f32(event.motion.yrel) * scale.y
     drag_scale :=
-        FRACTAL_MOUSE_DRAG_SCALE / (f32(resolution.h) * fractal.params.zoom)
+        FRACTAL_MOUSE_DRAG_SCALE / (f32(resolution.h) * fractal.camera.view.zoom)
 
-    fractal.params.center.x -= dx * drag_scale
-    fractal.params.center.y -= dy * drag_scale
+    fractal.camera.view.center.x -= dx * drag_scale
+    fractal.camera.view.center.y -= dy * drag_scale
 }
 
 @(private = "file")
@@ -261,7 +277,7 @@ start_fractal_drag :: proc(
         return .CONTINUE
     }
 
-    fractal.is_dragging = true
+    fractal.camera.is_dragging = true
     ok := sdl.SetCursor(fractal.move_cursor)
     if !ok {
         sdl.LogError(
@@ -276,7 +292,7 @@ start_fractal_drag :: proc(
 
 @(private = "file")
 end_fractal_drag :: proc(fractal: ^Fractal) -> sdl.AppResult {
-    fractal.is_dragging = false
+    fractal.camera.is_dragging = false
     ok := sdl.SetCursor(fractal.default_cursor)
     if !ok {
         sdl.LogError(

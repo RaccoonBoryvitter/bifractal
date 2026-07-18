@@ -6,44 +6,47 @@ import "core:math/rand"
 // Functions
 
 apply_palette_preset :: proc(
-    uniform: ^Fractal_Params,
+    palette: ^Palette,
     preset: Palette_Preset,
 ) {
-    uniform.palette_a = preset.a
-    uniform.palette_b = preset.b
-    uniform.palette_c = preset.c
-    uniform.palette_d = preset.d
+    palette^ = preset.palette
 }
 
-mirror_palette :: proc(uniform: ^Fractal_Params) {
-    uniform.palette_d.xyz = 1.0 - uniform.palette_d.xyz
+mirror_palette :: proc(palette: ^Palette) {
+    palette.phase.xyz = 1.0 - palette.phase.xyz
 }
 
-rotate_palette :: proc(uniform: ^Fractal_Params, k: f32) {
+rotate_palette :: proc(palette: ^Palette, k: f32) {
     for i in 0 ..< 3 {
-        rotated := uniform.palette_d[i] + k
-        uniform.palette_d[i] = rotated - math.floor(rotated)
+        rotated := palette.phase[i] + k
+        palette.phase[i] = rotated - math.floor(rotated)
     }
 }
 
-randomize_palette :: proc(uniform: ^Fractal_Params, gen: rand.Generator) {
+randomize_palette :: proc(palette: ^Palette, gen: rand.Generator) {
     for i in 0 ..< 3 {
-        uniform.palette_a[i] = rand.float32_range(0.0, 1.0, gen)
-        uniform.palette_b[i] = rand.float32_range(0.0, 1.0, gen)
-        uniform.palette_c[i] = rand.float32_range(0.0, 2.0, gen)
-        uniform.palette_d[i] = rand.float32_range(0.0, 1.0, gen)
+        palette.offset[i] = rand.float32_range(0.0, 1.0, gen)
+        palette.amplitude[i] = rand.float32_range(0.0, 1.0, gen)
+        palette.frequency[i] = rand.float32_range(0.0, 2.0, gen)
+        palette.phase[i] = rand.float32_range(0.0, 1.0, gen)
     }
-    uniform.palette_a.a = 0.0
-    uniform.palette_b.a = 0.0
-    uniform.palette_c.a = 0.0
-    uniform.palette_d.a = 0.0
+    palette.offset.a = 0.0
+    palette.amplitude.a = 0.0
+    palette.frequency.a = 0.0
+    palette.phase.a = 0.0
 }
 
-cosine_palette_cpu :: proc(t: f32, a, b, c, d: [4]f32) -> [3]f32 {
+cosine_palette_cpu :: proc(t: f32, palette: Palette) -> [3]f32 {
     color := [3]f32 {
-        a.r + b.r * math.cos(2 * math.PI * (c.r * t + d.r)),
-        a.g + b.g * math.cos(2 * math.PI * (c.g * t + d.g)),
-        a.b + b.b * math.cos(2 * math.PI * (c.b * t + d.b)),
+        palette.offset.r +
+        palette.amplitude.r *
+        math.cos(2 * math.PI * (palette.frequency.r * t + palette.phase.r)),
+        palette.offset.g +
+        palette.amplitude.g *
+        math.cos(2 * math.PI * (palette.frequency.g * t + palette.phase.g)),
+        palette.offset.b +
+        palette.amplitude.b *
+        math.cos(2 * math.PI * (palette.frequency.b * t + palette.phase.b)),
     }
     return {
         math.clamp(color.r, 0, 1),
