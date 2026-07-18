@@ -33,7 +33,7 @@ create_compute_pipeline :: proc(
 
 create_output_texture :: proc(
     device: ^sdl.GPUDevice,
-    resolution: Resolution,
+    resolution: Extent_2D,
 ) -> ^sdl.GPUTexture {
     return sdl.CreateGPUTexture(
         device,

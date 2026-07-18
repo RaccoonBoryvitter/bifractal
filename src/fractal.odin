@@ -8,7 +8,7 @@ import sdl "vendor:sdl3"
 
 view_screen_to_complex :: proc(
     screen_x, screen_y: f32,
-    resolution: Resolution,
+    resolution: Extent_2D,
     center: [2]f32,
     zoom: f32,
 ) -> complex64 {
@@ -40,9 +40,9 @@ reset_fractal_view :: proc(uniform: ^Fractal_Params, zoom_level: ^f32) {
 
 // State management
 
-init_fractal_state :: proc(resolution: Resolution) -> Fractal_State {
+init_fractal_state :: proc(resolution: Extent_2D) -> Fractal {
     zoom := FRACTAL_DEFAULT_ZOOM
-    return Fractal_State {
+    return Fractal {
         params = {
             center = {FRACTAL_DEFAULT_CENTER_X, FRACTAL_DEFAULT_CENTER_Y},
             zoom = FRACTAL_DEFAULT_ZOOM,
@@ -61,7 +61,7 @@ init_fractal_state :: proc(resolution: Resolution) -> Fractal_State {
 
 init_fractal_compute :: proc(
     device: ^sdl.GPUDevice,
-    resolution: Resolution,
+    resolution: Extent_2D,
 ) -> (
     compute_pipeline: ^sdl.GPUComputePipeline,
     texture: ^sdl.GPUTexture,
@@ -86,9 +86,9 @@ init_fractal_compute :: proc(
 
 fractal_process_input :: proc(
     event: ^sdl.Event,
-    fractal: ^Fractal_State,
+    fractal: ^Fractal,
     gpu_device: ^sdl.GPUDevice,
-    resolution: ^Resolution,
+    resolution: ^Extent_2D,
     gpu_texture: ^^sdl.GPUTexture,
     window: ^sdl.Window,
     is_mouse_captured: bool,
@@ -144,7 +144,7 @@ handle_resize :: proc(
     event: ^sdl.Event,
     main_window: ^sdl.Window,
     device: ^sdl.GPUDevice,
-    resolution: ^Resolution,
+    resolution: ^Extent_2D,
     uniform_resolution: ^[2]f32,
     texture: ^^sdl.GPUTexture,
 ) {
@@ -195,9 +195,9 @@ handle_fractal_keyboard_input :: proc(
 
 @(private = "file")
 handle_fractal_zoom :: proc(
-    fractal: ^Fractal_State,
+    fractal: ^Fractal,
     event: ^sdl.Event,
-    resolution: Resolution,
+    resolution: Extent_2D,
     window: ^sdl.Window,
 ) {
     mouse_x, mouse_y: f32
@@ -232,11 +232,11 @@ handle_fractal_zoom :: proc(
 
 @(private = "file")
 handle_fractal_drag :: proc(
-    fractal: ^Fractal_State,
+    fractal: ^Fractal,
     event: ^sdl.Event,
     window: ^sdl.Window,
     is_mouse_captured: bool,
-    resolution: Resolution,
+    resolution: Extent_2D,
 ) {
     if !fractal.is_dragging || is_mouse_captured {
         return
@@ -254,7 +254,7 @@ handle_fractal_drag :: proc(
 
 @(private = "file")
 start_fractal_drag :: proc(
-    fractal: ^Fractal_State,
+    fractal: ^Fractal,
     is_mouse_captured: bool,
 ) -> sdl.AppResult {
     if is_mouse_captured {
@@ -275,7 +275,7 @@ start_fractal_drag :: proc(
 }
 
 @(private = "file")
-end_fractal_drag :: proc(fractal: ^Fractal_State) -> sdl.AppResult {
+end_fractal_drag :: proc(fractal: ^Fractal) -> sdl.AppResult {
     fractal.is_dragging = false
     ok := sdl.SetCursor(fractal.default_cursor)
     if !ok {

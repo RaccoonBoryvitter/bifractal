@@ -2,7 +2,7 @@ package main
 
 // Window configuration
 WINDOW_TITLE :: "Odin Zoom"
-WINDOW_RESOLUTION :: Resolution {
+WINDOW_RESOLUTION :: Extent_2D {
     w = 1280,
     h = 720,
 }

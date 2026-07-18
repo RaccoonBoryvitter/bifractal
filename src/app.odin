@@ -98,15 +98,15 @@ create_app_logger :: proc() -> log.Logger {
     }
 }
 
-destroy_app :: proc(state: ^App_State) {
+destroy_app :: proc(state: ^App_Context) {
     if state == nil {
         return
     }
 
-    if state.im_context != nil {
+    if state.ui.ctx != nil {
         im_sdlgpu.Shutdown()
         im_sdl.Shutdown()
-        im.DestroyContext(state.im_context)
+        im.DestroyContext(state.ui.ctx)
     }
 
     if state.fractal.move_cursor != nil {
@@ -129,15 +129,15 @@ destroy_app :: proc(state: ^App_State) {
     if state.gpu.device != nil {
         sdl.DestroyGPUDevice(state.gpu.device)
     }
-    if state.window != nil {
-        sdl.DestroyWindow(state.window)
+    if state.window.handle != nil {
+        sdl.DestroyWindow(state.window.handle)
     }
 
     sdl.SetLogOutputFunction(sdl.GetDefaultLogOutputFunction(), nil)
     sdl.Quit()
 
-    delete(state.gpu_name)
-    delete(state.gpu_driver)
+    delete(state.gpu.name)
+    delete(state.gpu.driver)
 
     if state.logger.procedure != nil {
         log.destroy_console_logger(state.logger)
@@ -145,8 +145,8 @@ destroy_app :: proc(state: ^App_State) {
     free(state)
 }
 
-init_app :: proc() -> ^App_State {
-    state := new(App_State)
+init_app :: proc() -> ^App_Context {
+    state := new(App_Context)
     state.logger = create_app_logger()
     context.logger = state.logger
 
@@ -160,26 +160,26 @@ init_app :: proc() -> ^App_State {
     ok := true
     defer if !ok { destroy_app(state) }
 
-    state.window = init_window()
-    if state.window == nil {
+    state.window.handle = init_window()
+    if state.window.handle == nil {
         ok = false
         return nil
     }
 
     sdl.GetWindowSizeInPixels(
-        state.window,
-        (^i32)(&state.window_resolution.w),
-        (^i32)(&state.window_resolution.h),
+        state.window.handle,
+        (^i32)(&state.window.size.w),
+        (^i32)(&state.window.size.h),
     )
 
-    state.gpu.device = init_gpu(state.window)
+    state.gpu.device = init_gpu(state.window.handle)
     if state.gpu.device == nil {
         ok = false
         return nil
     }
 
     gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)
-    state.gpu_name = strings.clone(
+    state.gpu.name = strings.clone(
         string(
             sdl.GetStringProperty(
                 gpu_props,
@@ -188,13 +188,13 @@ init_app :: proc() -> ^App_State {
             ),
         ),
     )
-    state.gpu_driver = strings.clone(
+    state.gpu.driver = strings.clone(
         string(sdl.GetGPUDeviceDriver(state.gpu.device)),
     )
 
     pipeline, texture, init_ok := init_fractal_compute(
         state.gpu.device,
-        state.window_resolution,
+        state.window.size,
     )
     if !init_ok {
         ok = false
@@ -203,14 +203,14 @@ init_app :: proc() -> ^App_State {
     state.gpu.compute_pipeline = pipeline
     state.gpu.texture = texture
 
-    state.fractal = init_fractal_state(state.window_resolution)
+    state.fractal = init_fractal_state(state.window.size)
 
-    state.rand_state = rand.create_u64(42)
-    state.fps_last_ticks = sdl.GetTicks()
+    state.palette.rand_state = rand.create_u64(42)
+    state.time.last_ticks = sdl.GetTicks()
 
     im.CHECKVERSION()
-    state.im_context = im.CreateContext()
-    imgui_io := im.GetIOImGuiContextPtr(state.im_context)
+    state.ui.ctx = im.CreateContext()
+    imgui_io := im.GetIOImGuiContextPtr(state.ui.ctx)
     imgui_io.ConfigFlags += {.NavEnableKeyboard, .DockingEnable}
 
     system_theme := sdl.GetSystemTheme()
@@ -229,13 +229,13 @@ init_app :: proc() -> ^App_State {
     imgui_style.FontScaleDpi = main_scale
     imgui_io.ConfigDpiScaleFonts = true
 
-    im_sdl.InitForSDLGPU(state.window)
+    im_sdl.InitForSDLGPU(state.window.handle)
 
     init_info := im_sdlgpu.InitInfo {
         Device               = state.gpu.device,
         ColorTargetFormat    = sdl.GetGPUSwapchainTextureFormat(
             state.gpu.device,
-            state.window,
+            state.window.handle,
         ),
         MSAASamples          = ._1,
         SwapchainComposition = .SDR,

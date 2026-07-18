@@ -8,10 +8,29 @@ import "core:math/rand"
 import im "deps:imgui"
 import sdl "vendor:sdl3"
 
-Gpu_Resources :: struct {
+Extent_2D :: struct {
+    w, h: u32,
+}
+
+Window :: struct {
+    handle: ^sdl.Window,
+    size:   Extent_2D,
+}
+
+Gpu_Context :: struct {
     device:           ^sdl.GPUDevice,
     compute_pipeline: ^sdl.GPUComputePipeline,
     texture:          ^sdl.GPUTexture,
+    name:             string,
+    driver:           string,
+}
+
+Fractal :: struct {
+    params:         Fractal_Params,
+    zoom_level:     f32,
+    is_dragging:    bool,
+    default_cursor: ^sdl.Cursor,
+    move_cursor:    ^sdl.Cursor,
 }
 
 Fractal_Params :: struct {
@@ -25,14 +44,6 @@ Fractal_Params :: struct {
     resolution: [2]f32,
 }
 
-Fractal_State :: struct {
-    params:         Fractal_Params,
-    zoom_level:     f32,
-    is_dragging:    bool,
-    default_cursor: ^sdl.Cursor,
-    move_cursor:    ^sdl.Cursor,
-}
-
 Palette_Preset :: struct {
     name: string,
     a:    [4]f32,
@@ -41,29 +52,29 @@ Palette_Preset :: struct {
     d:    [4]f32,
 }
 
-Resolution :: struct {
-    w, h: u32,
+Palette_State :: struct {
+    banded:     bool,
+    snapshot:   Maybe(Palette_Preset),
+    rand_state: rand.Default_Random_State,
 }
 
-ImGui_Resources :: struct {
-    ctx: ^im.Context,
+Ui_State :: struct {
+    ctx:           ^im.Context,
+    mouse_complex: complex64,
 }
 
-App_State :: struct {
-    window:               ^sdl.Window,
-    window_resolution:    Resolution,
-    logger:               log.Logger,
-    gpu:                  Gpu_Resources,
-    gpu_name:             string,
-    gpu_driver:           string,
-    mouse_complex:        complex64,
-    fractal:              Fractal_State,
-    palette_banded:       bool,
-    palette_snapshot:     Palette_Preset,
-    palette_has_snapshot: bool,
-    rand_state:           rand.Default_Random_State,
-    fps_frame_count:      u32,
-    fps_last_ticks:       u64,
-    fps_current:          f32,
-    im_context:           ^im.Context,
+Time :: struct {
+    frame_count: u32,
+    last_ticks:  u64,
+    current:     f32,
+}
+
+App_Context :: struct {
+    window:  Window,
+    logger:  log.Logger,
+    gpu:     Gpu_Context,
+    fractal: Fractal,
+    palette: Palette_State,
+    ui:      Ui_State,
+    time:    Time,
 }

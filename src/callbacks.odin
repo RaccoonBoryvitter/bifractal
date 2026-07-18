@@ -64,27 +64,27 @@ SDL_AppEvent :: proc "c" (
     event: ^sdl.Event,
 ) -> sdl.AppResult {
     context = runtime.default_context()
-    state := (^App_State)(appstate)
+    state := (^App_Context)(appstate)
     context.logger = state.logger
 
     im_sdl.ProcessEvent(event)
 
     if event.type == .KEY_DOWN && event.key.key == sdl.K_F11 {
-        window_flags := sdl.GetWindowFlags(state.window)
+        window_flags := sdl.GetWindowFlags(state.window.handle)
         is_fullscreen := .FULLSCREEN in window_flags
-        sdl.SetWindowFullscreen(state.window, !is_fullscreen)
+        sdl.SetWindowFullscreen(state.window.handle, !is_fullscreen)
         return .CONTINUE
     }
 
-    io := im.GetIOImGuiContextPtr(state.im_context)
+    io := im.GetIOImGuiContextPtr(state.ui.ctx)
     is_mouse_captured := io.WantCaptureMouse || im.IsAnyItemHovered()
     fractal_result := fractal_process_input(
         event,
         &state.fractal,
         state.gpu.device,
-        &state.window_resolution,
+        &state.window.size,
         &state.gpu.texture,
-        state.window,
+        state.window.handle,
         is_mouse_captured,
         io.WantCaptureKeyboard,
     )
@@ -95,16 +95,16 @@ SDL_AppEvent :: proc "c" (
     return .CONTINUE
 }
 
-fps_update :: proc(state: ^App_State) {
-    state.fps_frame_count += 1
+fps_update :: proc(state: ^App_Context) {
+    state.time.frame_count += 1
     now := sdl.GetTicks()
-    elapsed := now - state.fps_last_ticks
+    elapsed := now - state.time.last_ticks
 
     if elapsed >= FPS_INTERVAL_MS {
-        state.fps_current =
-            f32(state.fps_frame_count) / (f32(elapsed) / 1000.0)
-        state.fps_frame_count = 0
-        state.fps_last_ticks = now
+        state.time.current =
+            f32(state.time.frame_count) / (f32(elapsed) / 1000.0)
+        state.time.frame_count = 0
+        state.time.last_ticks = now
     }
 }
 
@@ -113,7 +113,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     context = runtime.default_context()
     defer free_all(context.temp_allocator)
 
-    state := (^App_State)(appstate)
+    state := (^App_Context)(appstate)
     context.logger = state.logger
 
     fps_update(state)
@@ -130,7 +130,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 @(export)
 SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     context = runtime.default_context()
-    state := (^App_State)(appstate)
+    state := (^App_Context)(appstate)
     if state != nil {
         context.logger = state.logger
         destroy_app(state)

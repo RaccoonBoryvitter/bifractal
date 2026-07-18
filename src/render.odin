@@ -5,7 +5,7 @@ import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 
 import sdl "vendor:sdl3"
 
-render_present_frame :: proc(state: ^App_State) -> sdl.AppResult {
+render_present_frame :: proc(state: ^App_Context) -> sdl.AppResult {
     command_buffer := sdl.AcquireGPUCommandBuffer(state.gpu.device)
 
     storage_texture_bindings := [1]sdl.GPUStorageTextureReadWriteBinding {
@@ -27,8 +27,8 @@ render_present_frame :: proc(state: ^App_State) -> sdl.AppResult {
     )
     sdl.DispatchGPUCompute(
         compute_pass,
-        (state.window_resolution.w + 7) / 8,
-        (state.window_resolution.h + 7) / 8,
+        (state.window.size.w + 7) / 8,
+        (state.window.size.h + 7) / 8,
         1,
     )
     sdl.EndGPUComputePass(compute_pass)
@@ -38,7 +38,7 @@ render_present_frame :: proc(state: ^App_State) -> sdl.AppResult {
 
     ok := sdl.WaitAndAcquireGPUSwapchainTexture(
         command_buffer,
-        state.window,
+        state.window.handle,
         &swapchain_texture,
         &width,
         &height,
@@ -69,8 +69,8 @@ render_present_frame :: proc(state: ^App_State) -> sdl.AppResult {
         sdl.GPUBlitInfo {
             source = {
                 texture = state.gpu.texture,
-                w = state.window_resolution.w,
-                h = state.window_resolution.h,
+                w = state.window.size.w,
+                h = state.window.size.h,
                 mip_level = 0,
                 layer_or_depth_plane = 0,
                 x = 0,

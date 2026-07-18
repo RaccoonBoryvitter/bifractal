@@ -15,7 +15,7 @@ import sdl "vendor:sdl3"
 RGBA8 :: distinct [4]u8
 
 
-create_imgui_ui :: proc(state: ^App_State) {
+create_imgui_ui :: proc(state: ^App_Context) {
     defer free_all(context.temp_allocator)
 
     im.SetNextWindowSize({360, 600}, .FirstUseEver)
@@ -41,19 +41,19 @@ create_imgui_ui :: proc(state: ^App_State) {
 
         mouse_x, mouse_y: f32
         _ = sdl.GetMouseState(&mouse_x, &mouse_y)
-        scale := get_window_pixel_scale(state.window)
-        state.mouse_complex = view_screen_to_complex(
+        scale := get_window_pixel_scale(state.window.handle)
+        state.ui.mouse_complex = view_screen_to_complex(
             mouse_x * scale.x,
             mouse_y * scale.y,
-            state.window_resolution,
+            state.window.size,
             state.fractal.params.center,
             state.fractal.params.zoom,
         )
         im.Text(
             fmt.ctprintf(
                 "Mouse: %+.6f %+.6fi",
-                real(state.mouse_complex),
-                imag(state.mouse_complex),
+                real(state.ui.mouse_complex),
+                imag(state.ui.mouse_complex),
             ),
         )
 
@@ -74,7 +74,7 @@ create_imgui_ui :: proc(state: ^App_State) {
 
     // Palette
     if im.CollapsingHeader("Palette", {.DefaultOpen}) {
-        im.Checkbox("Banded", &state.palette_banded)
+        im.Checkbox("Banded", &state.palette.banded)
 
         draw_list := im.GetWindowDrawList()
         pos := im.GetCursorScreenPos()
@@ -86,7 +86,7 @@ create_imgui_ui :: proc(state: ^App_State) {
             draw_list,
             pos,
             size,
-            state.palette_banded,
+            state.palette.banded,
             &state.fractal.params,
         )
 
@@ -97,7 +97,7 @@ create_imgui_ui :: proc(state: ^App_State) {
         if im.Button("Randomize") {
             randomize_palette(
                 &state.fractal.params,
-                rand.default_random_generator(&state.rand_state),
+                rand.default_random_generator(&state.palette.rand_state),
             )
         }
         im.SameLine()
@@ -123,20 +123,20 @@ create_imgui_ui :: proc(state: ^App_State) {
 
     // Stats
     if im.CollapsingHeader("Stats", {.DefaultOpen}) {
-        im.Text(fmt.ctprintf("FPS: %.1f", state.fps_current))
+        im.Text(fmt.ctprintf("FPS: %.1f", state.time.current))
         im.Text(
             fmt.ctprintf(
                 "Frame time: %.2f ms",
-                1000.0 / max(state.fps_current, 0.001),
+                1000.0 / max(state.time.current, 0.001),
             ),
         )
-        im.Text(fmt.ctprintf("GPU: %s", state.gpu_name))
-        im.Text(fmt.ctprintf("Graphics API: %s", state.gpu_driver))
+        im.Text(fmt.ctprintf("GPU: %s", state.gpu.name))
+        im.Text(fmt.ctprintf("Graphics API: %s", state.gpu.driver))
         im.Text(
             fmt.ctprintf(
                 "Resolution: %dx%d",
-                state.window_resolution.w,
-                state.window_resolution.h,
+                state.window.size.w,
+                state.window.size.h,
             ),
         )
     }
