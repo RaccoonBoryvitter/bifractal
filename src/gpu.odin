@@ -5,7 +5,7 @@ import sdl "vendor:sdl3"
 resize_gpu_output :: proc(
     ctx: ^Gpu_Context,
     new_size: Extent_2D,
-) -> Maybe(^sdl.GPUTexture) {
+) -> ^sdl.GPUTexture {
     if ctx.output != nil && ctx.device != nil {
         sdl.ReleaseGPUTexture(ctx.device, ctx.output)
     }
