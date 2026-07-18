@@ -76,20 +76,35 @@ SDL_AppEvent :: proc "c" (
         return .CONTINUE
     }
 
+    if event.type == .QUIT || event.type == .WINDOW_CLOSE_REQUESTED {
+        return .SUCCESS
+    }
+
+    if event.type == .WINDOW_RESIZED ||
+       event.type == .WINDOW_PIXEL_SIZE_CHANGED {
+        if event.window.windowID == sdl.GetWindowID(state.window.handle) {
+            pixel_w, pixel_h: i32
+            sdl.GetWindowSizeInPixels(state.window.handle, &pixel_w, &pixel_h)
+            state.window.size.w = u32(pixel_w)
+            state.window.size.h = u32(pixel_h)
+            state.fractal.params.resolution = {f32(pixel_w), f32(pixel_h)}
+            if resize_gpu_output(&state.gpu, state.window.size) == nil {
+                state.gpu.valid = false
+            }
+        }
+        return .CONTINUE
+    }
+
     io := im.GetIOImGuiContextPtr(state.ui.ctx)
     is_mouse_captured := io.WantCaptureMouse || im.IsAnyItemHovered()
-    fractal_result := fractal_process_input(
-        event,
+    input := fractal_process_input(
         &state.fractal,
-        &state.gpu,
-        &state.window.size,
+        event,
         state.window.handle,
         is_mouse_captured,
         io.WantCaptureKeyboard,
     )
-    if fractal_result != .CONTINUE {
-        return fractal_result
-    }
+    fractal_apply_command(&state.fractal, input, state.window.handle)
 
     return .CONTINUE
 }

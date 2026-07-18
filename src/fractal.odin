@@ -7,7 +7,7 @@ import sdl "vendor:sdl3"
 // Functions
 
 view_screen_to_complex :: proc(
-    screen: [2]f32,
+    screen: Vec2,
     size: Extent_2D,
     view: Fractal_View,
 ) -> complex64 {
@@ -19,15 +19,15 @@ view_screen_to_complex :: proc(
     )
 }
 
-get_window_pixel_scale :: proc(window: ^sdl.Window) -> [2]f32 {
+get_window_pixel_scale :: proc(window: ^sdl.Window) -> Vec2 {
     logical_w, logical_h: i32
     pixel_w, pixel_h: i32
     sdl.GetWindowSize(window, &logical_w, &logical_h)
     sdl.GetWindowSizeInPixels(window, &pixel_w, &pixel_h)
     if logical_w <= 0 || logical_h <= 0 {
-        return {1, 1}
+        return Vec2{1, 1}
     }
-    return {f32(pixel_w) / f32(logical_w), f32(pixel_h) / f32(logical_h)}
+    return Vec2{f32(pixel_w) / f32(logical_w), f32(pixel_h) / f32(logical_h)}
 }
 
 reset_fractal_view :: proc(
@@ -60,7 +60,7 @@ init_fractal_state :: proc(resolution: Extent_2D) -> Fractal {
                 zoom = FRACTAL_DEFAULT_ZOOM,
             },
             is_dragging = false,
-            drag_start = {0, 0},
+            drag_start = Vec2{0, 0},
         },
         params = {
             max_iter = FRACTAL_DEFAULT_MAX_ITER,
@@ -81,201 +81,154 @@ init_fractal_state :: proc(resolution: Extent_2D) -> Fractal {
 // Input management
 
 fractal_process_input :: proc(
-    event: ^sdl.Event,
     fractal: ^Fractal,
-    gpu: ^Gpu_Context,
-    resolution: ^Extent_2D,
+    event: ^sdl.Event,
     window: ^sdl.Window,
-    is_mouse_captured: bool,
-    want_capture_keyboard: bool,
-) -> sdl.AppResult {
+    ui_wants_mouse: bool,
+    ui_wants_keyboard: bool,
+) -> Fractal_Input {
     #partial switch event.type {
-    case .QUIT, .WINDOW_CLOSE_REQUESTED:
-        return .SUCCESS
     case .KEY_DOWN:
-        if !want_capture_keyboard {
-            handle_fractal_keyboard_input(
-                &fractal.camera.view,
-                &fractal.params,
-                &fractal.zoom_level,
-                event.key.key,
-            )
+        if ui_wants_keyboard {
+            return Fractal_Input{}
+        }
+        pan := FRACTAL_PAN_FACTOR / fractal.camera.view.zoom
+        switch event.key.key {
+        case sdl.K_W:
+            return Fractal_Input{cmd = .Pan, delta = Vec2{0, -pan}}
+        case sdl.K_S:
+            return Fractal_Input{cmd = .Pan, delta = Vec2{0, pan}}
+        case sdl.K_A:
+            return Fractal_Input{cmd = .Pan, delta = Vec2{-pan, 0}}
+        case sdl.K_D:
+            return Fractal_Input{cmd = .Pan, delta = Vec2{pan, 0}}
+        case sdl.K_Q:
+            return Fractal_Input{cmd = .Decrease_Iter}
+        case sdl.K_E:
+            return Fractal_Input{cmd = .Increase_Iter}
+        case sdl.K_R:
+            return Fractal_Input{cmd = .Reset_View}
+        case:
+            return Fractal_Input{}
         }
     case .MOUSE_WHEEL:
-        if !is_mouse_captured {
-            handle_fractal_zoom(fractal, event, resolution^, window)
+        if ui_wants_mouse {
+            return Fractal_Input{}
         }
-    case .MOUSE_BUTTON_UP:
-        if event.button.button == sdl.BUTTON_LEFT {
-            return end_fractal_drag(fractal)
+        mouse_x, mouse_y: f32
+        _ = sdl.GetMouseState(&mouse_x, &mouse_y)
+        scale := get_window_pixel_scale(window)
+        return Fractal_Input {
+            cmd = .Zoom,
+            pos = Vec2{mouse_x * scale.x, mouse_y * scale.y},
+            delta = Vec2{0, f32(event.wheel.y)},
         }
     case .MOUSE_BUTTON_DOWN:
-        if event.button.button == sdl.BUTTON_LEFT {
-            return start_fractal_drag(fractal, is_mouse_captured)
+        if ui_wants_mouse || event.button.button != sdl.BUTTON_LEFT {
+            return Fractal_Input{}
         }
+        return Fractal_Input{cmd = .Drag_Start}
+    case .MOUSE_BUTTON_UP:
+        if event.button.button != sdl.BUTTON_LEFT {
+            return Fractal_Input{}
+        }
+        return Fractal_Input{cmd = .Drag_End}
     case .MOUSE_MOTION:
-        handle_fractal_drag(
-            fractal,
-            event,
-            window,
-            is_mouse_captured,
-            resolution^,
-        )
-    case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
-        handle_resize(
-            event,
-            window,
-            gpu,
-            resolution,
-            &fractal.params.resolution,
-        )
-    }
-
-    return .CONTINUE
-}
-
-@(private = "file")
-handle_resize :: proc(
-    event: ^sdl.Event,
-    main_window: ^sdl.Window,
-    gpu: ^Gpu_Context,
-    resolution: ^Extent_2D,
-    uniform_resolution: ^[2]f32,
-) {
-    if event.window.windowID != sdl.GetWindowID(main_window) {
-        return
-    }
-
-    pixel_w, pixel_h: i32
-    sdl.GetWindowSizeInPixels(main_window, &pixel_w, &pixel_h)
-
-    resolution.w = u32(pixel_w)
-    resolution.h = u32(pixel_h)
-    uniform_resolution^ = {f32(pixel_w), f32(pixel_h)}
-
-    if resize_gpu_output(gpu, resolution^) == nil {
-        gpu.valid = false
-    }
-}
-
-@(private = "file")
-handle_fractal_keyboard_input :: proc(
-    view: ^Fractal_View,
-    params: ^Fractal_Params,
-    zoom_level: ^f32,
-    keycode: sdl.Keycode,
-) {
-    switch keycode {
-    case sdl.K_W:
-        view.center.y -= FRACTAL_PAN_FACTOR / view.zoom
-    case sdl.K_S:
-        view.center.y += FRACTAL_PAN_FACTOR / view.zoom
-    case sdl.K_A:
-        view.center.x -= FRACTAL_PAN_FACTOR / view.zoom
-    case sdl.K_D:
-        view.center.x += FRACTAL_PAN_FACTOR / view.zoom
-    case sdl.K_Q:
-        params.max_iter -= FRACTAL_ITERATION_DECREASE_STEP
-        if params.max_iter < FRACTAL_MIN_ITERATIONS {
-            params.max_iter = FRACTAL_MIN_ITERATIONS
+        if ui_wants_mouse || !fractal.camera.is_dragging {
+            return Fractal_Input{}
         }
-    case sdl.K_E:
-        params.max_iter += FRACTAL_ITERATION_STEP
-        if params.max_iter > FRACTAL_MAX_ITERATIONS {
-            params.max_iter = FRACTAL_MAX_ITERATIONS
+        scale := get_window_pixel_scale(window)
+        dx := f32(event.motion.xrel) * scale.x
+        dy := f32(event.motion.yrel) * scale.y
+        drag_scale :=
+            FRACTAL_MOUSE_DRAG_SCALE /
+            (fractal.params.resolution.y * fractal.camera.view.zoom)
+        return Fractal_Input {
+            cmd = .Pan,
+            delta = Vec2{-dx * drag_scale, -dy * drag_scale},
         }
-    case sdl.K_R:
-        reset_fractal_view(view, params, zoom_level)
     }
+
+    return Fractal_Input{}
 }
 
-@(private = "file")
-handle_fractal_zoom :: proc(
+fractal_apply_command :: proc(
     fractal: ^Fractal,
-    event: ^sdl.Event,
-    resolution: Extent_2D,
+    input: Fractal_Input,
     window: ^sdl.Window,
 ) {
-    mouse_x, mouse_y: f32
-    _ = sdl.GetMouseState(&mouse_x, &mouse_y)
-    scale := get_window_pixel_scale(window)
-    mouse := [2]f32{mouse_x * scale.x, mouse_y * scale.y}
-
-    mouse_complex := view_screen_to_complex(
-        mouse,
-        resolution,
-        fractal.camera.view,
-    )
-
-    fractal.zoom_level += event.wheel.y * FRACTAL_ZOOM_SCROLL_FACTOR
-    fractal.zoom_level = max(fractal.zoom_level, FRACTAL_MIN_ZOOM_LOG)
-    fractal.camera.view.zoom = math.exp(fractal.zoom_level)
-
-    new_mouse_complex := view_screen_to_complex(
-        mouse,
-        resolution,
-        fractal.camera.view,
-    )
-
-    fractal.camera.view.center.x += real(mouse_complex) - real(new_mouse_complex)
-    fractal.camera.view.center.y += imag(mouse_complex) - imag(new_mouse_complex)
-}
-
-@(private = "file")
-handle_fractal_drag :: proc(
-    fractal: ^Fractal,
-    event: ^sdl.Event,
-    window: ^sdl.Window,
-    is_mouse_captured: bool,
-    resolution: Extent_2D,
-) {
-    if !fractal.camera.is_dragging || is_mouse_captured {
+    switch input.cmd {
+    case .None:
         return
-    }
-
-    scale := get_window_pixel_scale(window)
-    dx := f32(event.motion.xrel) * scale.x
-    dy := f32(event.motion.yrel) * scale.y
-    drag_scale :=
-        FRACTAL_MOUSE_DRAG_SCALE / (f32(resolution.h) * fractal.camera.view.zoom)
-
-    fractal.camera.view.center.x -= dx * drag_scale
-    fractal.camera.view.center.y -= dy * drag_scale
-}
-
-@(private = "file")
-start_fractal_drag :: proc(
-    fractal: ^Fractal,
-    is_mouse_captured: bool,
-) -> sdl.AppResult {
-    if is_mouse_captured {
-        return .CONTINUE
-    }
-
-    fractal.camera.is_dragging = true
-    ok := sdl.SetCursor(fractal.move_cursor)
-    if !ok {
-        sdl.LogError(
-            i32(sdl.LogCategory.APPLICATION),
-            "unable to set move cursor: %s",
-            sdl.GetError(),
+    case .Pan:
+        fractal.camera.view.center.x += input.delta.x
+        fractal.camera.view.center.y += input.delta.y
+    case .Zoom:
+        mouse_complex := view_screen_to_complex(
+            input.pos,
+            Extent_2D {
+                u32(fractal.params.resolution.x),
+                u32(fractal.params.resolution.y),
+            },
+            fractal.camera.view,
         )
-        return .FAILURE
-    }
-    return .CONTINUE
-}
 
-@(private = "file")
-end_fractal_drag :: proc(fractal: ^Fractal) -> sdl.AppResult {
-    fractal.camera.is_dragging = false
-    ok := sdl.SetCursor(fractal.default_cursor)
-    if !ok {
-        sdl.LogError(
-            i32(sdl.LogCategory.APPLICATION),
-            "unable to set default cursor: %s",
-            sdl.GetError(),
+        fractal.zoom_level += input.delta.y * FRACTAL_ZOOM_SCROLL_FACTOR
+        fractal.zoom_level = max(fractal.zoom_level, FRACTAL_MIN_ZOOM_LOG)
+        fractal.camera.view.zoom = math.exp(fractal.zoom_level)
+
+        new_mouse_complex := view_screen_to_complex(
+            input.pos,
+            Extent_2D {
+                u32(fractal.params.resolution.x),
+                u32(fractal.params.resolution.y),
+            },
+            fractal.camera.view,
         )
-        return .FAILURE
+
+        fractal.camera.view.center.x +=
+            real(mouse_complex) - real(new_mouse_complex)
+        fractal.camera.view.center.y +=
+            imag(mouse_complex) - imag(new_mouse_complex)
+    case .Reset_View:
+        reset_fractal_view(
+            &fractal.camera.view,
+            &fractal.params,
+            &fractal.zoom_level,
+        )
+    case .Increase_Iter:
+        fractal.params.max_iter += FRACTAL_ITERATION_STEP
+        if fractal.params.max_iter > FRACTAL_MAX_ITERATIONS {
+            fractal.params.max_iter = FRACTAL_MAX_ITERATIONS
+        }
+    case .Decrease_Iter:
+        fractal.params.max_iter -= FRACTAL_ITERATION_DECREASE_STEP
+        if fractal.params.max_iter < FRACTAL_MIN_ITERATIONS {
+            fractal.params.max_iter = FRACTAL_MIN_ITERATIONS
+        }
+    case .Drag_Start:
+        if fractal.camera.is_dragging {
+            return
+        }
+        fractal.camera.is_dragging = true
+        if !sdl.SetCursor(fractal.move_cursor) {
+            sdl.LogError(
+                i32(sdl.LogCategory.APPLICATION),
+                "unable to set move cursor: %s",
+                sdl.GetError(),
+            )
+        }
+    case .Drag_End:
+        if !fractal.camera.is_dragging {
+            return
+        }
+        fractal.camera.is_dragging = false
+        if !sdl.SetCursor(fractal.default_cursor) {
+            sdl.LogError(
+                i32(sdl.LogCategory.APPLICATION),
+                "unable to set default cursor: %s",
+                sdl.GetError(),
+            )
+        }
     }
-    return .CONTINUE
 }

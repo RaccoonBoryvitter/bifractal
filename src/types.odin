@@ -8,6 +8,8 @@ import "core:math/rand"
 import im "deps:imgui"
 import sdl "vendor:sdl3"
 
+Vec2 :: distinct [2]f32
+
 Extent_2D :: struct {
     w, h: u32,
 }
@@ -42,7 +44,24 @@ Fractal_View :: struct {
 Fractal_Camera :: struct {
     view:        Fractal_View,
     is_dragging: bool,
-    drag_start:  [2]f32,
+    drag_start:  Vec2,
+}
+
+Fractal_Command :: enum {
+    None,
+    Pan,
+    Zoom,
+    Reset_View,
+    Increase_Iter,
+    Decrease_Iter,
+    Drag_Start,
+    Drag_End,
+}
+
+Fractal_Input :: struct {
+    cmd:   Fractal_Command,
+    pos:   Vec2,
+    delta: Vec2,
 }
 
 Fractal_Params :: struct {
