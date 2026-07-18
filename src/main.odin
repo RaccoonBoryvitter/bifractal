@@ -1,6 +1,5 @@
 package main
 
-import "base:runtime"
 import "core:c"
 import "core:os"
 import "core:strings"

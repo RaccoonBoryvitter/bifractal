@@ -1,6 +1,5 @@
 package main
 
-import "base:runtime"
 import "core:log"
 import "core:math/rand"
 import "core:strings"

@@ -1,9 +1,8 @@
 package main
 
-import "base:runtime"
-
 import "core:log"
 import "core:math/rand"
+import "core:mem"
 
 import im "deps:imgui"
 import sdl "vendor:sdl3"
@@ -139,6 +138,19 @@ App_Event :: union {
 
 App_Events :: struct {
     queue: [dynamic]App_Event,
+}
+
+Frame_Pass :: enum {
+    None,
+    Compute,
+    Blit,
+    Ui,
+}
+
+Render_Context :: struct {
+    cmd:     ^sdl.GPUCommandBuffer,
+    scratch: mem.Arena,
+    pass:    Frame_Pass,
 }
 
 Ui_State :: struct {

@@ -1,8 +1,6 @@
 #+feature dynamic-literals
 package main
 
-import "base:runtime"
-
 import "core:fmt"
 
 import im "deps:imgui"
