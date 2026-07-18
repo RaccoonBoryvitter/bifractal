@@ -98,6 +98,56 @@ create_app_logger :: proc() -> log.Logger {
     }
 }
 
+app_dispatch_events :: proc(state: ^App_Context) {
+    for event in state.events.queue {
+        switch e in event {
+        case View_Reset:
+            reset_fractal_view(
+                &state.fractal.camera.view,
+                &state.fractal.params,
+                &state.fractal.zoom_level,
+            )
+        case Max_Iter_Changed:
+            state.fractal.params.max_iter = clamp(
+                e.value,
+                FRACTAL_MIN_ITERATIONS,
+                FRACTAL_MAX_ITERATIONS,
+            )
+        case Window_Resized:
+            state.window.size = e.size
+            state.fractal.params.resolution = {f32(e.size.w), f32(e.size.h)}
+            if resize_gpu_output(&state.gpu, e.size) == nil {
+                state.gpu.valid = false
+            }
+        case Palette_Banded_Changed:
+            state.palette.banded = e.banded
+        case Palette_Mirrored:
+            mirror_palette(&state.fractal.params.palette)
+        case Palette_Rotated:
+            rotate_palette(&state.fractal.params.palette, e.delta)
+        case Palette_Randomized:
+            randomize_palette(
+                &state.fractal.params.palette,
+                rand.default_random_generator(&state.palette.rand_state),
+            )
+        case Palette_Preset_Applied:
+            apply_palette_preset(&state.fractal.params.palette, e.preset)
+        case Palette_Color_Changed:
+            switch e.kind {
+            case .Offset:
+                state.fractal.params.palette.offset = e.value
+            case .Amplitude:
+                state.fractal.params.palette.amplitude = e.value
+            case .Frequency:
+                state.fractal.params.palette.frequency = e.value
+            case .Phase:
+                state.fractal.params.palette.phase = e.value
+            }
+        }
+    }
+    clear(&state.events.queue)
+}
+
 destroy_app :: proc(state: ^App_Context) {
     if state == nil {
         return
@@ -120,10 +170,7 @@ destroy_app :: proc(state: ^App_Context) {
         sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.output)
     }
     if state.gpu.pipeline != nil && state.gpu.device != nil {
-        sdl.ReleaseGPUComputePipeline(
-            state.gpu.device,
-            state.gpu.pipeline,
-        )
+        sdl.ReleaseGPUComputePipeline(state.gpu.device, state.gpu.pipeline)
     }
 
     if state.gpu.device != nil {
@@ -138,6 +185,7 @@ destroy_app :: proc(state: ^App_Context) {
 
     delete(state.gpu.name)
     delete(state.gpu.driver)
+    delete(state.events.queue)
 
     if state.logger.procedure != nil {
         log.destroy_console_logger(state.logger)
@@ -149,6 +197,8 @@ init_app :: proc() -> ^App_Context {
     state := new(App_Context)
     state.logger = create_app_logger()
     context.logger = state.logger
+
+    state.events.queue = make([dynamic]App_Event)
 
     sdl.SetLogOutputFunction(sdl_log_callback, &state.logger)
     when ODIN_DEBUG {

@@ -85,12 +85,10 @@ SDL_AppEvent :: proc "c" (
         if event.window.windowID == sdl.GetWindowID(state.window.handle) {
             pixel_w, pixel_h: i32
             sdl.GetWindowSizeInPixels(state.window.handle, &pixel_w, &pixel_h)
-            state.window.size.w = u32(pixel_w)
-            state.window.size.h = u32(pixel_h)
-            state.fractal.params.resolution = {f32(pixel_w), f32(pixel_h)}
-            if resize_gpu_output(&state.gpu, state.window.size) == nil {
-                state.gpu.valid = false
-            }
+            append(
+                &state.events.queue,
+                Window_Resized{size = Extent_2D{u32(pixel_w), u32(pixel_h)}},
+            )
         }
         return .CONTINUE
     }
@@ -137,6 +135,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     im.NewFrame()
 
     create_imgui_ui(state)
+    app_dispatch_events(state)
 
     return render_present_frame(state)
 }

@@ -95,6 +95,52 @@ Palette_State :: struct {
     rand_state: rand.Default_Random_State,
 }
 
+Palette_Color_Kind :: enum {
+    Offset,
+    Amplitude,
+    Frequency,
+    Phase,
+}
+
+View_Reset :: struct {}
+Max_Iter_Changed :: struct {
+    value: i32,
+}
+Window_Resized :: struct {
+    size: Extent_2D,
+}
+Palette_Banded_Changed :: struct {
+    banded: bool,
+}
+Palette_Mirrored :: struct {}
+Palette_Rotated :: struct {
+    delta: f32,
+}
+Palette_Randomized :: struct {}
+Palette_Preset_Applied :: struct {
+    preset: Palette_Preset,
+}
+Palette_Color_Changed :: struct {
+    kind:  Palette_Color_Kind,
+    value: [4]f32,
+}
+
+App_Event :: union {
+    View_Reset,
+    Max_Iter_Changed,
+    Window_Resized,
+    Palette_Banded_Changed,
+    Palette_Mirrored,
+    Palette_Rotated,
+    Palette_Randomized,
+    Palette_Preset_Applied,
+    Palette_Color_Changed,
+}
+
+App_Events :: struct {
+    queue: [dynamic]App_Event,
+}
+
 Ui_State :: struct {
     ctx:           ^im.Context,
     mouse_complex: complex64,
@@ -114,4 +160,5 @@ App_Context :: struct {
     palette: Palette_State,
     ui:      Ui_State,
     time:    Time,
+    events:  App_Events,
 }

@@ -2,7 +2,6 @@
 package main
 
 import "base:runtime"
-import "core:math/rand"
 
 import "core:fmt"
 
@@ -46,7 +45,7 @@ create_imgui_ui :: proc(state: ^App_Context) {
         _ = sdl.GetMouseState(&mouse_x, &mouse_y)
         scale := get_window_pixel_scale(state.window.handle)
         state.ui.mouse_complex = view_screen_to_complex(
-            {mouse_x * scale.x, mouse_y * scale.y},
+            Vec2{mouse_x * scale.x, mouse_y * scale.y},
             state.window.size,
             state.fractal.camera.view,
         )
@@ -58,25 +57,30 @@ create_imgui_ui :: proc(state: ^App_Context) {
             ),
         )
 
-        im.SliderInt(
+        max_iter := state.fractal.params.max_iter
+        if im.SliderInt(
             "Iterations",
-            &state.fractal.params.max_iter,
+            &max_iter,
             FRACTAL_MIN_ITERATIONS,
             FRACTAL_MAX_ITERATIONS,
-        )
+        ) {
+            append(&state.events.queue, Max_Iter_Changed{value = max_iter})
+        }
 
         if im.Button("Reset View") {
-            reset_fractal_view(
-                &state.fractal.camera.view,
-                &state.fractal.params,
-                &state.fractal.zoom_level,
-            )
+            append(&state.events.queue, View_Reset{})
         }
     }
 
     // Palette
     if im.CollapsingHeader("Palette", {.DefaultOpen}) {
-        im.Checkbox("Banded", &state.palette.banded)
+        banded := state.palette.banded
+        if im.Checkbox("Banded", &banded) {
+            append(
+                &state.events.queue,
+                Palette_Banded_Changed{banded = banded},
+            )
+        }
 
         draw_list := im.GetWindowDrawList()
         pos := im.GetCursorScreenPos()
@@ -93,45 +97,56 @@ create_imgui_ui :: proc(state: ^App_Context) {
         )
 
         if im.Button("Mirror") {
-            mirror_palette(&state.fractal.params.palette)
+            append(&state.events.queue, Palette_Mirrored{})
         }
         im.SameLine()
         if im.Button("Randomize") {
-            randomize_palette(
-                &state.fractal.params.palette,
-                rand.default_random_generator(&state.palette.rand_state),
-            )
+            append(&state.events.queue, Palette_Randomized{})
         }
         im.SameLine()
         if im.Button("Rotate") {
-            rotate_palette(&state.fractal.params.palette, 0.05)
+            append(&state.events.queue, Palette_Rotated{delta = 0.05})
         }
 
-        im.ColorEdit4(
-            "Offset",
-            &state.fractal.params.palette.offset,
-            {.NoAlpha},
-        )
-        im.ColorEdit4(
-            "Amplitude",
-            &state.fractal.params.palette.amplitude,
-            {.NoAlpha},
-        )
-        im.ColorEdit4(
-            "Frequency",
-            &state.fractal.params.palette.frequency,
-            {.NoAlpha},
-        )
-        im.ColorEdit4(
-            "Phase",
-            &state.fractal.params.palette.phase,
-            {.NoAlpha},
-        )
+        offset := state.fractal.params.palette.offset
+        if im.ColorEdit4("Offset", &offset, {.NoAlpha}) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed{kind = .Offset, value = offset},
+            )
+        }
+
+        amplitude := state.fractal.params.palette.amplitude
+        if im.ColorEdit4("Amplitude", &amplitude, {.NoAlpha}) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed{kind = .Amplitude, value = amplitude},
+            )
+        }
+
+        frequency := state.fractal.params.palette.frequency
+        if im.ColorEdit4("Frequency", &frequency, {.NoAlpha}) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed{kind = .Frequency, value = frequency},
+            )
+        }
+
+        phase := state.fractal.params.palette.phase
+        if im.ColorEdit4("Phase", &phase, {.NoAlpha}) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed{kind = .Phase, value = phase},
+            )
+        }
 
         if im.CollapsingHeader("Presets", {}) {
             for preset in PALETTE_PRESETS {
                 if im.Button(fmt.ctprintf(preset.name)) {
-                    apply_palette_preset(&state.fractal.params.palette, preset)
+                    append(
+                        &state.events.queue,
+                        Palette_Preset_Applied{preset = preset},
+                    )
                 }
                 im.SameLine()
                 draw_preset_swatch(draw_list, preset)
