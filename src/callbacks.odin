@@ -81,9 +81,8 @@ SDL_AppEvent :: proc "c" (
     fractal_result := fractal_process_input(
         event,
         &state.fractal,
-        state.gpu.device,
+        &state.gpu,
         &state.window.size,
-        &state.gpu.texture,
         state.window.handle,
         is_mouse_captured,
         io.WantCaptureKeyboard,

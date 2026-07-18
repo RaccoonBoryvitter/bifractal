@@ -6,10 +6,14 @@ import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 import sdl "vendor:sdl3"
 
 render_present_frame :: proc(state: ^App_Context) -> sdl.AppResult {
+    if !state.gpu.valid {
+        return .FAILURE
+    }
+
     command_buffer := sdl.AcquireGPUCommandBuffer(state.gpu.device)
 
     storage_texture_bindings := [1]sdl.GPUStorageTextureReadWriteBinding {
-        {texture = state.gpu.texture, cycle = true},
+        {texture = state.gpu.output, cycle = true},
     }
     compute_pass := sdl.BeginGPUComputePass(
         command_buffer,
@@ -18,7 +22,7 @@ render_present_frame :: proc(state: ^App_Context) -> sdl.AppResult {
         nil,
         0,
     )
-    sdl.BindGPUComputePipeline(compute_pass, state.gpu.compute_pipeline)
+    sdl.BindGPUComputePipeline(compute_pass, state.gpu.pipeline)
     uniform := fractal_make_uniform(&state.fractal)
     sdl.PushGPUComputeUniformData(
         command_buffer,
@@ -69,7 +73,7 @@ render_present_frame :: proc(state: ^App_Context) -> sdl.AppResult {
         command_buffer,
         sdl.GPUBlitInfo {
             source = {
-                texture = state.gpu.texture,
+                texture = state.gpu.output,
                 w = state.window.size.w,
                 h = state.window.size.h,
                 mip_level = 0,

@@ -78,37 +78,13 @@ init_fractal_state :: proc(resolution: Extent_2D) -> Fractal {
     }
 }
 
-init_fractal_compute :: proc(
-    device: ^sdl.GPUDevice,
-    resolution: Extent_2D,
-) -> (
-    compute_pipeline: ^sdl.GPUComputePipeline,
-    texture: ^sdl.GPUTexture,
-    ok: bool,
-) {
-    compute_pipeline = create_compute_pipeline(device)
-    if compute_pipeline == nil {
-        sdl.LogError(
-            i32(sdl.LogCategory.RENDER),
-            "unable to create GPU compute pipeline: %s",
-            sdl.GetError(),
-        )
-        return
-    }
-
-    texture = create_output_texture(device, resolution)
-    ok = true
-    return
-}
-
 // Input management
 
 fractal_process_input :: proc(
     event: ^sdl.Event,
     fractal: ^Fractal,
-    gpu_device: ^sdl.GPUDevice,
+    gpu: ^Gpu_Context,
     resolution: ^Extent_2D,
-    gpu_texture: ^^sdl.GPUTexture,
     window: ^sdl.Window,
     is_mouse_captured: bool,
     want_capture_keyboard: bool,
@@ -149,10 +125,9 @@ fractal_process_input :: proc(
         handle_resize(
             event,
             window,
-            gpu_device,
+            gpu,
             resolution,
             &fractal.params.resolution,
-            gpu_texture,
         )
     }
 
@@ -163,10 +138,9 @@ fractal_process_input :: proc(
 handle_resize :: proc(
     event: ^sdl.Event,
     main_window: ^sdl.Window,
-    device: ^sdl.GPUDevice,
+    gpu: ^Gpu_Context,
     resolution: ^Extent_2D,
     uniform_resolution: ^[2]f32,
-    texture: ^^sdl.GPUTexture,
 ) {
     if event.window.windowID != sdl.GetWindowID(main_window) {
         return
@@ -179,8 +153,9 @@ handle_resize :: proc(
     resolution.h = u32(pixel_h)
     uniform_resolution^ = {f32(pixel_w), f32(pixel_h)}
 
-    sdl.ReleaseGPUTexture(device, texture^)
-    texture^ = create_output_texture(device, resolution^)
+    if resize_gpu_output(gpu, resolution^) == nil {
+        gpu.valid = false
+    }
 }
 
 @(private = "file")

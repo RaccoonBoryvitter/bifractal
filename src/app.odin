@@ -116,13 +116,13 @@ destroy_app :: proc(state: ^App_Context) {
         sdl.DestroyCursor(state.fractal.default_cursor)
     }
 
-    if state.gpu.texture != nil && state.gpu.device != nil {
-        sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.texture)
+    if state.gpu.output != nil && state.gpu.device != nil {
+        sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.output)
     }
-    if state.gpu.compute_pipeline != nil && state.gpu.device != nil {
+    if state.gpu.pipeline != nil && state.gpu.device != nil {
         sdl.ReleaseGPUComputePipeline(
             state.gpu.device,
-            state.gpu.compute_pipeline,
+            state.gpu.pipeline,
         )
     }
 
@@ -192,16 +192,18 @@ init_app :: proc() -> ^App_Context {
         string(sdl.GetGPUDeviceDriver(state.gpu.device)),
     )
 
-    pipeline, texture, init_ok := init_fractal_compute(
-        state.gpu.device,
-        state.window.size,
-    )
-    if !init_ok {
+    state.gpu.pipeline = create_compute_pipeline(state.gpu.device)
+    if state.gpu.pipeline == nil {
         ok = false
         return nil
     }
-    state.gpu.compute_pipeline = pipeline
-    state.gpu.texture = texture
+
+    if resize_gpu_output(&state.gpu, state.window.size) == nil {
+        ok = false
+        return nil
+    }
+
+    state.gpu.valid = true
 
     state.fractal = init_fractal_state(state.window.size)
 

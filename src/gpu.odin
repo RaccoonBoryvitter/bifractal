@@ -2,6 +2,28 @@ package main
 
 import sdl "vendor:sdl3"
 
+resize_gpu_output :: proc(
+    ctx: ^Gpu_Context,
+    new_size: Extent_2D,
+) -> Maybe(^sdl.GPUTexture) {
+    if ctx.output != nil && ctx.device != nil {
+        sdl.ReleaseGPUTexture(ctx.device, ctx.output)
+    }
+
+    new_output := create_output_texture(ctx.device, new_size)
+    if new_output == nil {
+        ctx.output = nil
+        ctx.output_size = {}
+        ctx.valid = false
+        return nil
+    }
+
+    ctx.output = new_output
+    ctx.output_size = new_size
+    ctx.valid = true
+    return new_output
+}
+
 create_compute_pipeline :: proc(
     device: ^sdl.GPUDevice,
 ) -> ^sdl.GPUComputePipeline {

@@ -18,11 +18,13 @@ Window :: struct {
 }
 
 Gpu_Context :: struct {
-    device:           ^sdl.GPUDevice,
-    compute_pipeline: ^sdl.GPUComputePipeline,
-    texture:          ^sdl.GPUTexture,
-    name:             string,
-    driver:           string,
+    device:      ^sdl.GPUDevice,
+    pipeline:    ^sdl.GPUComputePipeline,
+    output:      ^sdl.GPUTexture,
+    output_size: Extent_2D,
+    name:        string,
+    driver:      string,
+    valid:       bool,
 }
 
 Palette :: struct {
