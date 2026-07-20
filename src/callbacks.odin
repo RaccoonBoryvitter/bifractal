@@ -10,37 +10,6 @@ import im "deps:imgui"
 import im_sdl "deps:imgui/imgui_impl_sdl3"
 import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 
-sdl_log_callback :: proc "c" (
-    userdata: rawptr,
-    category: sdl.LogCategory,
-    priority: sdl.LogPriority,
-    message: cstring,
-) {
-    context = runtime.default_context()
-    logger := (^log.Logger)(userdata)
-    if logger == nil || logger.procedure == nil {
-        return
-    }
-
-    level: log.Level
-    switch priority {
-    case .INVALID:
-        level = .Debug
-    case .TRACE, .VERBOSE, .DEBUG:
-        level = .Debug
-    case .INFO:
-        level = .Info
-    case .WARN:
-        level = .Warning
-    case .ERROR:
-        level = .Error
-    case .CRITICAL:
-        level = .Fatal
-    }
-
-    logger.procedure(logger.data, level, string(message), logger.options)
-}
-
 @(export)
 SDL_AppInit :: proc "c" (
     appstate: ^rawptr,

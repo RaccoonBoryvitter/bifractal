@@ -1,5 +1,6 @@
 package main
 
+import "core:log"
 import "core:mem"
 
 import im "deps:imgui"
@@ -12,11 +13,7 @@ render_context_begin :: proc(
 ) -> (ctx: Render_Context, ok: bool) {
     ctx.cmd = sdl.AcquireGPUCommandBuffer(state.gpu.device)
     if ctx.cmd == nil {
-        sdl.LogError(
-            i32(sdl.LogCategory.RENDER),
-            "unable to acquire GPU command buffer: %s",
-            sdl.GetError(),
-        )
+        log.errorf("unable to acquire GPU command buffer: %s", sdl.GetError())
         return ctx, false
     }
 
@@ -29,11 +26,7 @@ render_context_begin :: proc(
 render_context_end :: proc(ctx: ^Render_Context) {
     if ctx.cmd != nil {
         if !sdl.SubmitGPUCommandBuffer(ctx.cmd) {
-            sdl.LogError(
-                i32(sdl.LogCategory.RENDER),
-                "unable to submit GPU command buffer: %s",
-                sdl.GetError(),
-            )
+            log.errorf("unable to submit GPU command buffer: %s", sdl.GetError())
         }
     }
     mem.arena_free_all(&ctx.scratch)
@@ -96,11 +89,7 @@ render_blit_pass :: proc(
         &height,
     )
     if !ok {
-        sdl.LogError(
-            i32(sdl.LogCategory.RENDER),
-            "unable to acquire swapchain texture: %s",
-            sdl.GetError(),
-        )
+        log.errorf("unable to acquire swapchain texture: %s", sdl.GetError())
         ctx.pass = .None
         return nil, false
     }

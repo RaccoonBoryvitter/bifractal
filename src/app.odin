@@ -12,11 +12,7 @@ import sdl "vendor:sdl3"
 init_window :: proc() -> ^sdl.Window {
     ok := sdl.Init({.VIDEO, .EVENTS})
     if !ok {
-        sdl.LogError(
-            i32(sdl.LogCategory.ERROR),
-            "unable to initialize SDL: %s",
-            sdl.GetError(),
-        )
+        log.errorf("unable to initialize SDL: %s", sdl.GetError())
         return nil
     }
 
@@ -28,11 +24,7 @@ init_window :: proc() -> ^sdl.Window {
         {.RESIZABLE, .HIGH_PIXEL_DENSITY},
     )
     if window == nil {
-        sdl.LogError(
-            i32(sdl.LogCategory.ERROR),
-            "unable to create SDL window: %s",
-            sdl.GetError(),
-        )
+        log.errorf("unable to create SDL window: %s", sdl.GetError())
         sdl.Quit()
         return nil
     }
@@ -49,41 +41,25 @@ init_window :: proc() -> ^sdl.Window {
 init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
     gpu_device := sdl.CreateGPUDevice({.SPIRV, .DXIL, .MSL}, true, nil)
     if gpu_device == nil {
-        sdl.LogError(
-            i32(sdl.LogCategory.ERROR),
-            "unable to create SDL GPU device: %s",
-            sdl.GetError(),
-        )
+        log.errorf("unable to create SDL GPU device: %s", sdl.GetError())
         return nil
     }
 
     ok := sdl.ClaimWindowForGPUDevice(gpu_device, window)
     if !ok {
-        sdl.LogError(
-            i32(sdl.LogCategory.ERROR),
-            "unable to claim window for GPU device: %s",
-            sdl.GetError(),
-        )
+        log.errorf("unable to claim window for GPU device: %s", sdl.GetError())
         sdl.DestroyGPUDevice(gpu_device)
         return nil
     }
 
     ok = sdl.SetGPUSwapchainParameters(gpu_device, window, .SDR, .VSYNC)
     if !ok {
-        sdl.LogWarn(
-            i32(sdl.LogCategory.RENDER),
-            "unable to set swapchain parameters: %s",
-            sdl.GetError(),
-        )
+        log.warnf("unable to set swapchain parameters: %s", sdl.GetError())
     }
 
     ok = sdl.SetGPUAllowedFramesInFlight(gpu_device, 2)
     if !ok {
-        sdl.LogWarn(
-            i32(sdl.LogCategory.RENDER),
-            "unable to set frames in flight: %s",
-            sdl.GetError(),
-        )
+        log.warnf("unable to set frames in flight: %s", sdl.GetError())
     }
 
     return gpu_device

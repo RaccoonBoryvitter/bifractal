@@ -1,5 +1,7 @@
 package main
 
+import "core:log"
+
 import sdl "vendor:sdl3"
 
 resize_gpu_output :: proc(
@@ -43,11 +45,7 @@ create_compute_pipeline :: proc(
     )
 
     if compute_pipeline == nil {
-        sdl.LogError(
-            i32(sdl.LogCategory.RENDER),
-            "failed to create compute pipeline: %s",
-            sdl.GetError(),
-        )
+        log.errorf("failed to create compute pipeline: %s", sdl.GetError())
     }
 
     return compute_pipeline

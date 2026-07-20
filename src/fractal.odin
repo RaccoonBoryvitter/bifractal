@@ -1,5 +1,6 @@
 package main
 
+import "core:log"
 import "core:math"
 
 import sdl "vendor:sdl3"
@@ -212,11 +213,7 @@ fractal_apply_command :: proc(
         }
         fractal.camera.is_dragging = true
         if !sdl.SetCursor(fractal.move_cursor) {
-            sdl.LogError(
-                i32(sdl.LogCategory.APPLICATION),
-                "unable to set move cursor: %s",
-                sdl.GetError(),
-            )
+            log.errorf("unable to set move cursor: %s", sdl.GetError())
         }
     case .Drag_End:
         if !fractal.camera.is_dragging {
@@ -224,11 +221,7 @@ fractal_apply_command :: proc(
         }
         fractal.camera.is_dragging = false
         if !sdl.SetCursor(fractal.default_cursor) {
-            sdl.LogError(
-                i32(sdl.LogCategory.APPLICATION),
-                "unable to set default cursor: %s",
-                sdl.GetError(),
-            )
+            log.errorf("unable to set default cursor: %s", sdl.GetError())
         }
     }
 }
