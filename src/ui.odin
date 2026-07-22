@@ -17,8 +17,8 @@ create_imgui_ui :: proc(state: ^App_Context) {
     }
     defer im.End()
 
-    // Navigation
-    if im.CollapsingHeader("Navigation", {.DefaultOpen}) {
+    // View
+    if im.CollapsingHeader("View", {.DefaultOpen}) {
         im.Text(
             fmt.ctprintf(
                 "Zoom: %s",
@@ -49,6 +49,13 @@ create_imgui_ui :: proc(state: ^App_Context) {
             ),
         )
 
+        if im.Button("Reset View") {
+            append(&state.events.queue, View_Reset{})
+        }
+    }
+
+    // Fractal
+    if im.CollapsingHeader("Fractal", {.DefaultOpen}) {
         max_iter := state.fractal.params.max_iter
         if im.SliderInt(
             "Iterations",
@@ -59,8 +66,12 @@ create_imgui_ui :: proc(state: ^App_Context) {
             append(&state.events.queue, Max_Iter_Changed{value = max_iter})
         }
 
-        if im.Button("Reset View") {
-            append(&state.events.queue, View_Reset{})
+        power := state.fractal.params.power
+        if im.SliderFloat("Power", &power, 1.5, 6.0) {
+            append(
+                &state.events.queue,
+                Mandelbrot_Power_Changed{value = power}
+            )
         }
     }
 

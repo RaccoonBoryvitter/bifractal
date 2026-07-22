@@ -55,15 +55,15 @@ function Build-Shaders {
         $metal = "$outDir/$($shader.Name).metal"
 
         Write-Host "Compiling $($shader.Name) -> SPIR-V ..."
-        & $shadercross $inputFile -o $spv -t $shader.Stage
+        & $shadercross $inputFile -o $spv -t $shader.Stage -I $shadersDir
         if ($LASTEXITCODE -ne 0) { throw "SPIR-V compile failed for $($shader.Name)" }
 
         Write-Host "Compiling $($shader.Name) -> DXIL ..."
-        & $shadercross $inputFile -o $dxil -t $shader.Stage
+        & $shadercross $inputFile -o $dxil -t $shader.Stage -I $shadersDir
         if ($LASTEXITCODE -ne 0) { throw "DXIL compile failed for $($shader.Name)" }
 
         Write-Host "Compiling $($shader.Name) -> MSL ..."
-        & $shadercross $inputFile -o $metal -t $shader.Stage -d MSL --msl-version 2.4.0
+        & $shadercross $inputFile -o $metal -t $shader.Stage -d MSL --msl-version 2.4.0 -I $shadersDir
         if ($LASTEXITCODE -ne 0) { throw "MSL compile failed for $($shader.Name)" }
     }
 

@@ -72,6 +72,7 @@ init_fractal_state :: proc(resolution: Extent_2D) -> Fractal {
                 frequency = {1.0, 1.0, 1.0, 0.0},
                 phase = {0.0, 0.10, 0.20, 0.0},
             },
+            power = 2.0,
         },
         zoom_level = math.log2(f32(zoom)),
         default_cursor = sdl.CreateSystemCursor(.DEFAULT),

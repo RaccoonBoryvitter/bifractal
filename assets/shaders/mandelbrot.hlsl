@@ -1,3 +1,5 @@
+#include "common.hlsli"
+
 RWTexture2D<float4> output_image : register(u0, space1);
 
 cbuffer UniformBlock : register(b0, space2) {
@@ -11,14 +13,17 @@ cbuffer UniformBlock : register(b0, space2) {
     float4 palette_phase;
 
     float2 resolution;
+    float  power;
 };
 
-static const float TWO_PI = 6.28318;
-
-float4 cosine_palette(float t) {
-    return palette_offset +
-           palette_amplitude *
-           cos(TWO_PI * (palette_frequency * t + palette_phase));
+float2 complex_pow(float2 z, float d) {
+    float r2 = dot(z, z);
+    if (r2 < 1e-24) return float2(0.0, 0.0); // avoid atan2(0,0)/log(0) issues near origin
+    float theta = atan2(z.y, z.x);
+    float r_d = pow(r2, d * 0.5);
+    float sin_td, cos_td;
+    sincos(d * theta, sin_td, cos_td);
+    return r_d * float2(cos_td, sin_td);
 }
 
 [numthreads(8, 8, 1)]
@@ -31,15 +36,20 @@ void main(uint3 global_id : SV_DispatchThreadID) {
     float2 z = float2(0.0, 0.0);
     int iter = 0;
     while (iter < max_iter && dot(z, z) < 4.0) {
-        z = float2(z.x * z.x - z.y * z.y + uv.x, 2.0 * z.x * z.y + uv.y);
+        z = complex_pow(z, power) + uv;
         iter++;
     }
 
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
     if (iter < max_iter) {
-        float smooth_iter = float(iter) - log2(log2(dot(z, z))) + 4.0;
-        float t = smooth_iter / float(max_iter);
-        color = cosine_palette(t);
+        float t = smooth_iter(iter, z, max_iter);
+        color = cosine_palette(
+            palette_offset,
+            palette_amplitude,
+            palette_frequency,
+            palette_phase,
+            t
+        );
     }
 
     output_image[pixel] = float4(color.xyz, 1.0);

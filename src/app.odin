@@ -118,6 +118,8 @@ app_dispatch_events :: proc(state: ^App_Context) {
             case .Phase:
                 state.fractal.params.palette.phase = e.value
             }
+        case Mandelbrot_Power_Changed:
+            state.fractal.params.power = e.value
         }
     }
     clear(&state.events.queue)
