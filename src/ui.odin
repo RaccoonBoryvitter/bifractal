@@ -1,16 +1,10 @@
-#+feature dynamic-literals
 package main
 
+import "base:runtime"
 import "core:fmt"
 
 import im "deps:imgui"
 import sdl "vendor:sdl3"
-
-// Types
-
-@(private = "file")
-RGBA8 :: distinct [4]u8
-
 
 create_imgui_ui :: proc(state: ^App_Context) {
     defer free_all(context.temp_allocator)
@@ -72,6 +66,98 @@ create_imgui_ui :: proc(state: ^App_Context) {
 
     // Palette
     if im.CollapsingHeader("Palette", {.DefaultOpen}) {
+        if draw_channel_button(
+            "Red Channel",
+            im.Vec4{1, 0, 0, 1},
+        ) {
+            state.ui.selected_channel = .Red
+        }
+
+        im.SameLine()
+        if draw_channel_button(
+            "Green Channel",
+            im.Vec4{0, 1, 0, 1},
+        ) {
+            state.ui.selected_channel = .Green
+        }
+
+        im.SameLine()
+        if draw_channel_button(
+            "Blue Channel",
+            im.Vec4{0, 0, 1, 1},
+        ) {
+            state.ui.selected_channel = .Blue
+        }
+
+        offset := state.fractal.params.palette.offset
+        if draw_palette_params_slider(
+            "Offset",
+            &offset,
+            state.ui.selected_channel,
+        ) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed {
+                    kind = .Offset,
+                    value = offset,
+                },
+            )
+        }
+
+        amplitude := state.fractal.params.palette.amplitude
+        if draw_palette_params_slider(
+            "Amplitude",
+            &amplitude,
+            state.ui.selected_channel,
+        ) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed {
+                    kind = .Amplitude,
+                    value = amplitude,
+                },
+            )
+        }
+
+        frequency := state.fractal.params.palette.frequency
+        if draw_palette_params_slider(
+            "Frequency",
+            &frequency,
+            state.ui.selected_channel,
+        ) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed {
+                    kind = .Frequency,
+                    value = frequency,
+                },
+            )
+        }
+
+        phase := state.fractal.params.palette.phase
+        if draw_palette_params_slider(
+            "Phase",
+            &phase,
+            state.ui.selected_channel,
+        ) {
+            append(
+                &state.events.queue,
+                Palette_Color_Changed {
+                    kind = .Phase,
+                    value = phase,
+                },
+            )
+        }
+
+        draw_list := im.GetWindowDrawList()
+
+        draw_palette_waveform(
+            state.fractal.params.palette,
+            state.ui.selected_channel,
+            draw_list,
+            context.temp_allocator,
+        )
+
         banded := state.palette.banded
         if im.Checkbox("Banded", &banded) {
             append(
@@ -80,19 +166,22 @@ create_imgui_ui :: proc(state: ^App_Context) {
             )
         }
 
-        draw_list := im.GetWindowDrawList()
         pos := im.GetCursorScreenPos()
         avail := im.GetContentRegionAvail()
         size := im.Vec2{avail.x, 40}
         im.Dummy(size)
 
-        draw_gradient_swatch(
-            draw_list,
-            pos,
-            size,
-            state.palette.banded,
-            &state.fractal.params,
-        )
+        if (state.palette.banded) {
+            draw_banded_gradient_swatch(
+                draw_list,
+                pos,
+                size,
+                &state.fractal.params,
+            )
+        }
+         else {
+            draw_gradient_swatch(draw_list, pos, size, &state.fractal.params)
+        }
 
         if im.Button("Mirror") {
             append(&state.events.queue, Palette_Mirrored{})
@@ -104,38 +193,6 @@ create_imgui_ui :: proc(state: ^App_Context) {
         im.SameLine()
         if im.Button("Rotate") {
             append(&state.events.queue, Palette_Rotated{delta = 0.05})
-        }
-
-        offset := state.fractal.params.palette.offset
-        if im.ColorEdit4("Offset", &offset, {.NoAlpha}) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Offset, value = offset},
-            )
-        }
-
-        amplitude := state.fractal.params.palette.amplitude
-        if im.ColorEdit4("Amplitude", &amplitude, {.NoAlpha}) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Amplitude, value = amplitude},
-            )
-        }
-
-        frequency := state.fractal.params.palette.frequency
-        if im.ColorEdit4("Frequency", &frequency, {.NoAlpha}) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Frequency, value = frequency},
-            )
-        }
-
-        phase := state.fractal.params.palette.phase
-        if im.ColorEdit4("Phase", &phase, {.NoAlpha}) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Phase, value = phase},
-            )
         }
 
         if im.CollapsingHeader("Presets", {}) {
@@ -186,45 +243,49 @@ draw_gradient_swatch :: proc(
     draw_list: ^im.DrawList,
     pos: im.Vec2,
     size: im.Vec2,
-    banded: bool,
     params: ^Fractal_Params,
 ) {
-    if banded {
-        bands := clamp(
-            params.max_iter,
-            FRACTAL_MIN_ITERATIONS,
-            i32(PALETTE_SWATCH_STEPS),
+    step_w := size.x / f32(PALETTE_SWATCH_STEPS)
+    for i in 0 ..< PALETTE_SWATCH_STEPS {
+        t := f32(i) / f32(PALETTE_SWATCH_STEPS - 1)
+        color := cosine_palette_cpu(t, params.palette)
+        col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
+        x0 := pos.x + f32(i) * step_w
+        x1 := x0 + step_w + 1
+        im.DrawList_AddRectFilled(
+            draw_list,
+            {x0, pos.y},
+            {x1, pos.y + size.y},
+            col,
         )
-        step_w := size.x / f32(bands)
-        for i in 0 ..< bands {
-            t := f32(i) / f32(bands)
-            color := cosine_palette_cpu(t, params.palette)
-            col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
-            x0 := pos.x + f32(i) * step_w
-            x1 := x0 + step_w + 1
-            im.DrawList_AddRectFilled(
-                draw_list,
-                {x0, pos.y},
-                {x1, pos.y + size.y},
-                col,
-            )
-        }
     }
-     else {
-        step_w := size.x / f32(PALETTE_SWATCH_STEPS)
-        for i in 0 ..< PALETTE_SWATCH_STEPS {
-            t := f32(i) / f32(PALETTE_SWATCH_STEPS - 1)
-            color := cosine_palette_cpu(t, params.palette)
-            col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
-            x0 := pos.x + f32(i) * step_w
-            x1 := x0 + step_w + 1
-            im.DrawList_AddRectFilled(
-                draw_list,
-                {x0, pos.y},
-                {x1, pos.y + size.y},
-                col,
-            )
-        }
+}
+
+@(private = "file")
+draw_banded_gradient_swatch :: proc(
+    draw_list: ^im.DrawList,
+    pos: im.Vec2,
+    size: im.Vec2,
+    params: ^Fractal_Params,
+) {
+    bands := clamp(
+        params.max_iter,
+        FRACTAL_MIN_ITERATIONS,
+        i32(PALETTE_SWATCH_STEPS),
+    )
+    step_w := size.x / f32(bands)
+    for i in 0 ..< bands {
+        t := f32(i) / f32(bands)
+        color := cosine_palette_cpu(t, params.palette)
+        col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
+        x0 := pos.x + f32(i) * step_w
+        x1 := x0 + step_w + 1
+        im.DrawList_AddRectFilled(
+            draw_list,
+            {x0, pos.y},
+            {x1, pos.y + size.y},
+            col,
+        )
     }
 }
 
@@ -249,4 +310,118 @@ draw_preset_swatch :: proc(draw_list: ^im.DrawList, preset: Palette_Preset) {
             col,
         )
     }
+}
+
+@(private = "file")
+PALETTE_WAVEFORM_SAMPLES :: 200
+
+@(private = "file")
+draw_palette_waveform :: proc(
+    palette: Palette,
+    selected_channel: Channel,
+    draw_list: ^im.DrawList,
+    allocator: runtime.Allocator,
+) {
+    samples := palette_create_samples(
+        palette,
+        PALETTE_WAVEFORM_SAMPLES,
+        allocator,
+    )
+
+    pos := im.GetCursorScreenPos()
+    avail := im.GetContentRegionAvail()
+    plot_size := im.Vec2{avail.x, 100}
+
+    r_points := make([]im.Vec2, PALETTE_WAVEFORM_SAMPLES, allocator)
+    g_points := make([]im.Vec2, PALETTE_WAVEFORM_SAMPLES, allocator)
+    b_points := make([]im.Vec2, PALETTE_WAVEFORM_SAMPLES, allocator)
+
+    for sample, i in samples {
+        t := f32(i) / f32(PALETTE_WAVEFORM_SAMPLES)
+        x := pos.x + t * plot_size.x
+        r_points[i] = {x, pos.y + (1.0 - sample.r) * plot_size.y}
+        g_points[i] = {x, pos.y + (1.0 - sample.g) * plot_size.y}
+        b_points[i] = {x, pos.y + (1.0 - sample.b) * plot_size.y}
+    }
+
+    im.Dummy(plot_size)
+
+    red := im.GetColorU32ImVec4(im.Vec4{1, 0, 0, 1})
+    im.DrawList_AddPolyline(
+        draw_list,
+        raw_data(r_points),
+        i32(PALETTE_WAVEFORM_SAMPLES),
+        red,
+        selected_channel == .Red ? 3.0 : 1.0,
+    )
+
+    green := im.GetColorU32ImVec4(im.Vec4{0, 1, 0, 1})
+    im.DrawList_AddPolyline(
+        draw_list,
+        raw_data(g_points),
+        i32(PALETTE_WAVEFORM_SAMPLES),
+        green,
+        selected_channel == .Green ? 3.0 : 1.0,
+    )
+
+    blue := im.GetColorU32ImVec4(im.Vec4{0, 0, 1, 1})
+    im.DrawList_AddPolyline(
+        draw_list,
+        raw_data(b_points),
+        i32(PALETTE_WAVEFORM_SAMPLES),
+        blue,
+        selected_channel == .Blue ? 3.0 : 1.0,
+    )
+}
+
+@(private = "file")
+draw_channel_button :: proc(
+    label: cstring,
+    border_color: im.Vec4,
+) -> bool {
+    im.PushStyleVar(.FrameBorderSize, 1.0)
+    defer im.PopStyleVar()
+
+    im.PushStyleColor(.Border, im.GetColorU32ImVec4(border_color))
+    defer im.PopStyleColor()
+
+    return im.Button(label)
+}
+
+@(private = "file")
+draw_palette_params_slider :: proc(
+    label: cstring,
+    palette_param: ^[4]f32,
+    selected_channel: Channel,
+) -> bool {
+    switch selected_channel {
+    case .Red:
+        return im.SliderFloat(
+            label,
+            &palette_param.r,
+            0.0,
+            1.0,
+            "%.3f",
+            {.ClampOnInput},
+        )
+    case .Green:
+        return im.SliderFloat(
+            label,
+            &palette_param.g,
+            0.0,
+            1.0,
+            "%.3f",
+            {.ClampOnInput},
+        )
+    case .Blue:
+        return im.SliderFloat(
+            label,
+            &palette_param.b,
+            0.0,
+            1.0,
+            "%.3f",
+            {.ClampOnInput},
+        )
+    }
+    return false
 }

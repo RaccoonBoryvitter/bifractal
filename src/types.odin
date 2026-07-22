@@ -9,6 +9,12 @@ import sdl "vendor:sdl3"
 
 Vec2 :: distinct [2]f32
 
+Channel :: enum {
+    Red,
+    Green,
+    Blue,
+}
+
 Extent_2D :: struct {
     w, h: u32,
 }
@@ -29,10 +35,7 @@ Gpu_Context :: struct {
 }
 
 Palette :: struct {
-    offset:    [4]f32,
-    amplitude: [4]f32,
-    frequency: [4]f32,
-    phase:     [4]f32,
+    offset, amplitude, frequency, phase: [4]f32,
 }
 
 Fractal_View :: struct {
@@ -154,8 +157,9 @@ Render_Context :: struct {
 }
 
 Ui_State :: struct {
-    ctx:           ^im.Context,
-    mouse_complex: complex64,
+    ctx:              ^im.Context,
+    mouse_complex:    complex64,
+    selected_channel: Channel,
 }
 
 Time :: struct {

@@ -237,6 +237,7 @@ init_app :: proc() -> ^App_Context {
 
     im.CHECKVERSION()
     state.ui.ctx = im.CreateContext()
+    state.ui.selected_channel = .Red
     imgui_io := im.GetIOImGuiContextPtr(state.ui.ctx)
     imgui_io.ConfigFlags += {.NavEnableKeyboard, .DockingEnable}
 

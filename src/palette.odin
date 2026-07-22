@@ -1,14 +1,12 @@
 package main
 
+import "base:runtime"
 import "core:math"
 import "core:math/rand"
 
 // Functions
 
-apply_palette_preset :: proc(
-    palette: ^Palette,
-    preset: Palette_Preset,
-) {
+apply_palette_preset :: proc(palette: ^Palette, preset: Palette_Preset) {
     palette^ = preset.palette
 }
 
@@ -40,17 +38,38 @@ cosine_palette_cpu :: proc(t: f32, palette: Palette) -> [3]f32 {
     color := [3]f32 {
         palette.offset.r +
         palette.amplitude.r *
-        math.cos(2 * math.PI * (palette.frequency.r * t + palette.phase.r)),
+            math.cos(
+                2 * math.PI * (palette.frequency.r * t + palette.phase.r),
+            ),
         palette.offset.g +
         palette.amplitude.g *
-        math.cos(2 * math.PI * (palette.frequency.g * t + palette.phase.g)),
+            math.cos(
+                2 * math.PI * (palette.frequency.g * t + palette.phase.g),
+            ),
         palette.offset.b +
         palette.amplitude.b *
-        math.cos(2 * math.PI * (palette.frequency.b * t + palette.phase.b)),
+            math.cos(
+                2 * math.PI * (palette.frequency.b * t + palette.phase.b),
+            ),
     }
     return {
         math.clamp(color.r, 0, 1),
         math.clamp(color.g, 0, 1),
         math.clamp(color.b, 0, 1),
     }
+}
+
+palette_create_samples :: proc(
+    palette: Palette,
+    num_samples: u32,
+    allocator: runtime.Allocator,
+) -> [][3]f32 {
+    samples := make([][3]f32, num_samples, allocator)
+
+    for i in 0..<num_samples {
+        t := f32(i) / f32(num_samples)
+        samples[i] = cosine_palette_cpu(t, palette)
+    }
+
+    return samples
 }
