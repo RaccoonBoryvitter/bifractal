@@ -70,34 +70,16 @@ create_imgui_ui :: proc(state: ^App_Context) {
         if im.SliderFloat("Power", &power, 1.5, 6.0) {
             append(
                 &state.events.queue,
-                Mandelbrot_Power_Changed{value = power}
+                Mandelbrot_Power_Changed{value = power},
             )
         }
     }
 
     // Palette
     if im.CollapsingHeader("Palette", {.DefaultOpen}) {
-        if draw_channel_button(
-            "Red Channel",
-            im.Vec4{1, 0, 0, 1},
-        ) {
-            state.ui.selected_channel = .Red
-        }
-
-        im.SameLine()
-        if draw_channel_button(
-            "Green Channel",
-            im.Vec4{0, 1, 0, 1},
-        ) {
-            state.ui.selected_channel = .Green
-        }
-
-        im.SameLine()
-        if draw_channel_button(
-            "Blue Channel",
-            im.Vec4{0, 0, 1, 1},
-        ) {
-            state.ui.selected_channel = .Blue
+        new_channel := draw_channels_radio_buttons(state.ui.selected_channel)
+        if new_channel != nil {
+            state.ui.selected_channel = new_channel.(Channel)
         }
 
         offset := state.fractal.params.palette.offset
@@ -108,10 +90,7 @@ create_imgui_ui :: proc(state: ^App_Context) {
         ) {
             append(
                 &state.events.queue,
-                Palette_Color_Changed {
-                    kind = .Offset,
-                    value = offset,
-                },
+                Palette_Color_Changed{kind = .Offset, value = offset},
             )
         }
 
@@ -123,10 +102,7 @@ create_imgui_ui :: proc(state: ^App_Context) {
         ) {
             append(
                 &state.events.queue,
-                Palette_Color_Changed {
-                    kind = .Amplitude,
-                    value = amplitude,
-                },
+                Palette_Color_Changed{kind = .Amplitude, value = amplitude},
             )
         }
 
@@ -138,10 +114,7 @@ create_imgui_ui :: proc(state: ^App_Context) {
         ) {
             append(
                 &state.events.queue,
-                Palette_Color_Changed {
-                    kind = .Frequency,
-                    value = frequency,
-                },
+                Palette_Color_Changed{kind = .Frequency, value = frequency},
             )
         }
 
@@ -153,10 +126,7 @@ create_imgui_ui :: proc(state: ^App_Context) {
         ) {
             append(
                 &state.events.queue,
-                Palette_Color_Changed {
-                    kind = .Phase,
-                    value = phase,
-                },
+                Palette_Color_Changed{kind = .Phase, value = phase},
             )
         }
 
@@ -327,6 +297,19 @@ draw_preset_swatch :: proc(draw_list: ^im.DrawList, preset: Palette_Preset) {
 PALETTE_WAVEFORM_SAMPLES :: 200
 
 @(private = "file")
+channel_to_vec4 :: proc(channel: Channel) -> im.Vec4 {
+    switch channel {
+    case .Red:
+        return im.Vec4{1, 0, 0, 1}
+    case .Green:
+        return im.Vec4{0, 1, 0, 1}
+    case .Blue:
+        return im.Vec4{0, 0, 1, 1}
+    }
+    return im.Vec4{0, 0, 0, 0}
+}
+
+@(private = "file")
 draw_palette_waveform :: proc(
     palette: Palette,
     selected_channel: Channel,
@@ -357,7 +340,7 @@ draw_palette_waveform :: proc(
 
     im.Dummy(plot_size)
 
-    red := im.GetColorU32ImVec4(im.Vec4{1, 0, 0, 1})
+    red := im.GetColorU32ImVec4(channel_to_vec4(.Red))
     im.DrawList_AddPolyline(
         draw_list,
         raw_data(r_points),
@@ -366,7 +349,7 @@ draw_palette_waveform :: proc(
         selected_channel == .Red ? 3.0 : 1.0,
     )
 
-    green := im.GetColorU32ImVec4(im.Vec4{0, 1, 0, 1})
+    green := im.GetColorU32ImVec4(channel_to_vec4(.Green))
     im.DrawList_AddPolyline(
         draw_list,
         raw_data(g_points),
@@ -375,7 +358,7 @@ draw_palette_waveform :: proc(
         selected_channel == .Green ? 3.0 : 1.0,
     )
 
-    blue := im.GetColorU32ImVec4(im.Vec4{0, 0, 1, 1})
+    blue := im.GetColorU32ImVec4(channel_to_vec4(.Blue))
     im.DrawList_AddPolyline(
         draw_list,
         raw_data(b_points),
@@ -386,17 +369,46 @@ draw_palette_waveform :: proc(
 }
 
 @(private = "file")
-draw_channel_button :: proc(
-    label: cstring,
-    border_color: im.Vec4,
-) -> bool {
-    im.PushStyleVar(.FrameBorderSize, 1.0)
-    defer im.PopStyleVar()
+draw_channels_radio_buttons :: proc(
+    selected_channel: Channel,
+) -> Maybe(Channel) {
+    im.BeginGroup()
+    defer im.EndGroup()
 
-    im.PushStyleColor(.Border, im.GetColorU32ImVec4(border_color))
-    defer im.PopStyleColor()
+    im.Text("Channels")
 
-    return im.Button(label)
+    new_channel: Maybe(Channel) = nil
+
+    im.PushStyleColorImVec4(.CheckMark, channel_to_vec4(.Red))
+    if im.RadioButton(
+        fmt.ctprintf("%s", Channel.Red),
+        selected_channel == .Red,
+    ) {
+        new_channel = .Red
+    }
+    im.PopStyleColor()
+
+    im.SameLine()
+    im.PushStyleColorImVec4(.CheckMark, channel_to_vec4(.Green))
+    if im.RadioButton(
+        fmt.ctprintf("%s", Channel.Green),
+        selected_channel == .Green,
+    ) {
+        new_channel = .Green
+    }
+    im.PopStyleColor()
+
+    im.SameLine()
+    im.PushStyleColorImVec4(.CheckMark, channel_to_vec4(.Blue))
+    if im.RadioButton(
+        fmt.ctprintf("%s", Channel.Blue),
+        selected_channel == .Blue,
+    ) {
+        new_channel = .Blue
+    }
+    im.PopStyleColor()
+
+    return new_channel
 }
 
 @(private = "file")
