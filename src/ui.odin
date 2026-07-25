@@ -17,198 +17,205 @@ create_imgui_ui :: proc(state: ^App_Context) {
     }
     defer im.End()
 
-    // View
-    if im.CollapsingHeader("View", {.DefaultOpen}) {
-        im.Text(
-            fmt.ctprintf(
-                "Zoom: %s",
-                format_zoom(state.fractal.camera.view.zoom),
-            ),
-        )
-        im.Text(
-            fmt.ctprintf(
-                "Center: %+.6f %+.6fi",
-                state.fractal.camera.view.center.x,
-                state.fractal.camera.view.center.y,
-            ),
-        )
-
-        mouse_x, mouse_y: f32
-        _ = sdl.GetMouseState(&mouse_x, &mouse_y)
-        scale := get_window_pixel_scale(state.window.handle)
-        state.ui.mouse_complex = view_screen_to_complex(
-            Vec2{mouse_x * scale.x, mouse_y * scale.y},
-            state.window.size,
-            state.fractal.camera.view,
-        )
-        im.Text(
-            fmt.ctprintf(
-                "Mouse: %+.6f %+.6fi",
-                real(state.ui.mouse_complex),
-                imag(state.ui.mouse_complex),
-            ),
-        )
-
-        if im.Button("Reset View") {
-            append(&state.events.queue, View_Reset{})
+    if im.BeginTabBar("SidebarTabs") {
+        if im.BeginTabItem("View") {
+            draw_view_tab(state)
+            im.EndTabItem()
         }
+
+        if im.BeginTabItem("Fractal") {
+            draw_fractal_tab(state)
+            im.EndTabItem()
+        }
+
+        if im.BeginTabItem("Palette") {
+            draw_palette_tab(state)
+            im.EndTabItem()
+        }
+
+        if im.BeginTabItem("Stats") {
+            draw_stats_tab(state)
+            im.EndTabItem()
+        }
+
+        im.EndTabBar()
+    }
+}
+
+draw_view_tab :: proc(state: ^App_Context) {
+    im.Text(
+        fmt.ctprintf("Zoom: %s", format_zoom(state.fractal.camera.view.zoom)),
+    )
+    im.Text(
+        fmt.ctprintf(
+            "Center: %+.6f %+.6fi",
+            state.fractal.camera.view.center.x,
+            state.fractal.camera.view.center.y,
+        ),
+    )
+
+    mouse_x, mouse_y: f32
+    _ = sdl.GetMouseState(&mouse_x, &mouse_y)
+    scale := get_window_pixel_scale(state.window.handle)
+    state.ui.mouse_complex = view_screen_to_complex(
+        Vec2{mouse_x * scale.x, mouse_y * scale.y},
+        state.window.size,
+        state.fractal.camera.view,
+    )
+    im.Text(
+        fmt.ctprintf(
+            "Mouse: %+.6f %+.6fi",
+            real(state.ui.mouse_complex),
+            imag(state.ui.mouse_complex),
+        ),
+    )
+
+    if im.Button("Reset View") {
+        append(&state.events.queue, View_Reset{})
+    }
+}
+
+draw_fractal_tab :: proc(state: ^App_Context) {
+    max_iter := state.fractal.params.max_iter
+    if im.SliderInt(
+        "Iterations",
+        &max_iter,
+        FRACTAL_MIN_ITERATIONS,
+        FRACTAL_MAX_ITERATIONS,
+    ) {
+        append(&state.events.queue, Max_Iter_Changed{value = max_iter})
     }
 
-    // Fractal
-    if im.CollapsingHeader("Fractal", {.DefaultOpen}) {
-        max_iter := state.fractal.params.max_iter
-        if im.SliderInt(
-            "Iterations",
-            &max_iter,
-            FRACTAL_MIN_ITERATIONS,
-            FRACTAL_MAX_ITERATIONS,
-        ) {
-            append(&state.events.queue, Max_Iter_Changed{value = max_iter})
-        }
+    power := state.fractal.params.power
+    if im.SliderFloat("Power", &power, 1.5, 6.0) {
+        append(&state.events.queue, Mandelbrot_Power_Changed{value = power})
+    }
+}
 
-        power := state.fractal.params.power
-        if im.SliderFloat("Power", &power, 1.5, 6.0) {
-            append(
-                &state.events.queue,
-                Mandelbrot_Power_Changed{value = power},
-            )
-        }
+draw_palette_tab :: proc(state: ^App_Context) {
+    new_channel := draw_channels_radio_buttons(state.ui.selected_channel)
+    if new_channel != nil {
+        state.ui.selected_channel = new_channel.(Channel)
     }
 
-    // Palette
-    if im.CollapsingHeader("Palette", {.DefaultOpen}) {
-        new_channel := draw_channels_radio_buttons(state.ui.selected_channel)
-        if new_channel != nil {
-            state.ui.selected_channel = new_channel.(Channel)
-        }
+    offset := state.fractal.params.palette.offset
+    if draw_palette_params_slider(
+        "Offset",
+        &offset,
+        state.ui.selected_channel,
+    ) {
+        append(
+            &state.events.queue,
+            Palette_Color_Changed{kind = .Offset, value = offset},
+        )
+    }
 
-        offset := state.fractal.params.palette.offset
-        if draw_palette_params_slider(
-            "Offset",
-            &offset,
-            state.ui.selected_channel,
-        ) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Offset, value = offset},
-            )
-        }
+    amplitude := state.fractal.params.palette.amplitude
+    if draw_palette_params_slider(
+        "Amplitude",
+        &amplitude,
+        state.ui.selected_channel,
+    ) {
+        append(
+            &state.events.queue,
+            Palette_Color_Changed{kind = .Amplitude, value = amplitude},
+        )
+    }
 
-        amplitude := state.fractal.params.palette.amplitude
-        if draw_palette_params_slider(
-            "Amplitude",
-            &amplitude,
-            state.ui.selected_channel,
-        ) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Amplitude, value = amplitude},
-            )
-        }
+    frequency := state.fractal.params.palette.frequency
+    if draw_palette_params_slider(
+        "Frequency",
+        &frequency,
+        state.ui.selected_channel,
+    ) {
+        append(
+            &state.events.queue,
+            Palette_Color_Changed{kind = .Frequency, value = frequency},
+        )
+    }
 
-        frequency := state.fractal.params.palette.frequency
-        if draw_palette_params_slider(
-            "Frequency",
-            &frequency,
-            state.ui.selected_channel,
-        ) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Frequency, value = frequency},
-            )
-        }
+    phase := state.fractal.params.palette.phase
+    if draw_palette_params_slider("Phase", &phase, state.ui.selected_channel) {
+        append(
+            &state.events.queue,
+            Palette_Color_Changed{kind = .Phase, value = phase},
+        )
+    }
 
-        phase := state.fractal.params.palette.phase
-        if draw_palette_params_slider(
-            "Phase",
-            &phase,
-            state.ui.selected_channel,
-        ) {
-            append(
-                &state.events.queue,
-                Palette_Color_Changed{kind = .Phase, value = phase},
-            )
-        }
+    draw_list := im.GetWindowDrawList()
 
-        draw_list := im.GetWindowDrawList()
+    draw_palette_waveform(
+        state.fractal.params.palette,
+        state.ui.selected_channel,
+        draw_list,
+        context.temp_allocator,
+    )
 
-        draw_palette_waveform(
-            state.fractal.params.palette,
-            state.ui.selected_channel,
+    banded := state.palette.banded
+    if im.Checkbox("Banded", &banded) {
+        append(&state.events.queue, Palette_Banded_Changed{banded = banded})
+    }
+
+    pos := im.GetCursorScreenPos()
+    avail := im.GetContentRegionAvail()
+    size := im.Vec2{avail.x, 40}
+    im.Dummy(size)
+
+    if (state.palette.banded) {
+        draw_banded_gradient_swatch(
             draw_list,
-            context.temp_allocator,
+            pos,
+            size,
+            &state.fractal.params,
         )
+    }
+     else {
+        draw_gradient_swatch(draw_list, pos, size, &state.fractal.params)
+    }
 
-        banded := state.palette.banded
-        if im.Checkbox("Banded", &banded) {
-            append(
-                &state.events.queue,
-                Palette_Banded_Changed{banded = banded},
-            )
-        }
+    if im.Button("Mirror") {
+        append(&state.events.queue, Palette_Mirrored{})
+    }
+    im.SameLine()
+    if im.Button("Randomize") {
+        append(&state.events.queue, Palette_Randomized{})
+    }
+    im.SameLine()
+    if im.Button("Rotate") {
+        append(&state.events.queue, Palette_Rotated{delta = 0.05})
+    }
 
-        pos := im.GetCursorScreenPos()
-        avail := im.GetContentRegionAvail()
-        size := im.Vec2{avail.x, 40}
-        im.Dummy(size)
-
-        if (state.palette.banded) {
-            draw_banded_gradient_swatch(
-                draw_list,
-                pos,
-                size,
-                &state.fractal.params,
-            )
-        }
-         else {
-            draw_gradient_swatch(draw_list, pos, size, &state.fractal.params)
-        }
-
-        if im.Button("Mirror") {
-            append(&state.events.queue, Palette_Mirrored{})
-        }
-        im.SameLine()
-        if im.Button("Randomize") {
-            append(&state.events.queue, Palette_Randomized{})
-        }
-        im.SameLine()
-        if im.Button("Rotate") {
-            append(&state.events.queue, Palette_Rotated{delta = 0.05})
-        }
-
-        if im.CollapsingHeader("Presets", {}) {
-            for preset in PALETTE_PRESETS {
-                if im.Button(fmt.ctprintf(preset.name)) {
-                    append(
-                        &state.events.queue,
-                        Palette_Preset_Applied{preset = preset},
-                    )
-                }
-                im.SameLine()
-                draw_preset_swatch(draw_list, preset)
+    if im.CollapsingHeader("Presets", {}) {
+        for preset in PALETTE_PRESETS {
+            if im.Button(fmt.ctprintf(preset.name)) {
+                append(
+                    &state.events.queue,
+                    Palette_Preset_Applied{preset = preset},
+                )
             }
+            im.SameLine()
+            draw_preset_swatch(draw_list, preset)
         }
     }
+}
 
-    // Stats
-    if im.CollapsingHeader("Stats", {.DefaultOpen}) {
-        im.Text(fmt.ctprintf("FPS: %.1f", state.time.current))
-        im.Text(
-            fmt.ctprintf(
-                "Frame time: %.2f ms",
-                1000.0 / max(state.time.current, 0.001),
-            ),
-        )
-        im.Text(fmt.ctprintf("GPU: %s", state.gpu.name))
-        im.Text(fmt.ctprintf("Graphics API: %s", state.gpu.driver))
-        im.Text(
-            fmt.ctprintf(
-                "Resolution: %dx%d",
-                state.window.size.w,
-                state.window.size.h,
-            ),
-        )
-    }
+draw_stats_tab :: proc(state: ^App_Context) {
+    im.Text(fmt.ctprintf("FPS: %.1f", state.time.current))
+    im.Text(
+        fmt.ctprintf(
+            "Frame time: %.2f ms",
+            1000.0 / max(state.time.current, 0.001),
+        ),
+    )
+    im.Text(fmt.ctprintf("GPU: %s", state.gpu.name))
+    im.Text(fmt.ctprintf("Graphics API: %s", state.gpu.driver))
+    im.Text(
+        fmt.ctprintf(
+            "Resolution: %dx%d",
+            state.window.size.w,
+            state.window.size.h,
+        ),
+    )
 }
 
 @(private = "file")
