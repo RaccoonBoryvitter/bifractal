@@ -4,19 +4,18 @@ import "core:log"
 import "core:math/rand"
 import "core:mem"
 
+import "geom"
+
 import im "deps:imgui"
 import sdl "vendor:sdl3"
 
-Vec2 :: distinct [2]f32
+Vec2 :: geom.Vec2
+Extent_2D :: geom.Extent_2D
 
 Channel :: enum {
     Red,
     Green,
     Blue,
-}
-
-Extent_2D :: struct {
-    w, h: u32,
 }
 
 Window :: struct {
