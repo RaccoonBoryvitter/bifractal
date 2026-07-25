@@ -120,6 +120,8 @@ app_dispatch_events :: proc(state: ^App_Context) {
             }
         case Mandelbrot_Power_Changed:
             state.fractal.params.power = e.value
+        case Interior_Color_Changed:
+            state.fractal.params.interior_color = { e.value.r, e.value.g, e.value.b, 1.0 }
         }
     }
     clear(&state.events.queue)

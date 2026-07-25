@@ -12,6 +12,7 @@ struct type_UniformBlock
     float4 palette_amplitude;
     float4 palette_frequency;
     float4 palette_phase;
+    float4 interior_color;
     float2 resolution;
     float power;
 };
@@ -82,16 +83,16 @@ kernel void main0(constant type_UniformBlock& UniformBlock [[buffer(0)]], textur
                 break;
             }
         }
-        float4 _142;
+        float4 _144;
         if (_92)
         {
-            _142 = UniformBlock.palette_offset + (UniformBlock.palette_amplitude * cos(((UniformBlock.palette_frequency * (((float(_86) - log2(log2(dot(_83, _83)))) + 4.0) / float(_91))) + UniformBlock.palette_phase) * 6.28318023681640625));
+            _144 = UniformBlock.palette_offset + (UniformBlock.palette_amplitude * cos(((UniformBlock.palette_frequency * (((float(_86) - log2(log2(dot(_83, _83)))) + 4.0) / float(_91))) + UniformBlock.palette_phase) * 6.28318023681640625));
         }
         else
         {
-            _142 = float4(0.0, 0.0, 0.0, 1.0);
+            _144 = UniformBlock.interior_color;
         }
-        output_image.write(float4(_142.xyz, 1.0), uint2(gl_GlobalInvocationID.xy));
+        output_image.write(float4(_144.xyz, 1.0), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

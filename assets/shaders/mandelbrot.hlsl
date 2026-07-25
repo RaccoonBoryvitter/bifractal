@@ -12,6 +12,8 @@ cbuffer UniformBlock : register(b0, space2) {
     float4 palette_frequency;
     float4 palette_phase;
 
+    float4 interior_color;
+
     float2 resolution;
     float  power;
 };
@@ -40,7 +42,7 @@ void main(uint3 global_id : SV_DispatchThreadID) {
         iter++;
     }
 
-    float4 color = float4(0.0, 0.0, 0.0, 1.0);
+    float4 color = interior_color;
     if (iter < max_iter) {
         float t = smooth_iter(iter, z, max_iter);
         color = cosine_palette(

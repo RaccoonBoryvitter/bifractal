@@ -42,6 +42,7 @@ create_imgui_ui :: proc(state: ^App_Context) {
     }
 }
 
+@(private = "file")
 draw_view_tab :: proc(state: ^App_Context) {
     im.Text(
         fmt.ctprintf("Zoom: %s", format_zoom(state.fractal.camera.view.zoom)),
@@ -75,6 +76,7 @@ draw_view_tab :: proc(state: ^App_Context) {
     }
 }
 
+@(private = "file")
 draw_fractal_tab :: proc(state: ^App_Context) {
     max_iter := state.fractal.params.max_iter
     if im.SliderInt(
@@ -92,7 +94,16 @@ draw_fractal_tab :: proc(state: ^App_Context) {
     }
 }
 
+@(private = "file")
 draw_palette_tab :: proc(state: ^App_Context) {
+    interior_color := state.fractal.params.interior_color.rgb
+    if im.ColorEdit3("Interior", &interior_color) {
+        append(
+            &state.events.queue,
+            Interior_Color_Changed{value = interior_color}
+        )
+    }
+
     new_channel := draw_channels_radio_buttons(state.ui.selected_channel)
     if new_channel != nil {
         state.ui.selected_channel = new_channel.(Channel)
@@ -199,6 +210,7 @@ draw_palette_tab :: proc(state: ^App_Context) {
     }
 }
 
+@(private = "file")
 draw_stats_tab :: proc(state: ^App_Context) {
     im.Text(fmt.ctprintf("FPS: %.1f", state.time.current))
     im.Text(

@@ -67,10 +67,11 @@ Fractal_Input :: struct {
 }
 
 Fractal_Params :: struct {
-    max_iter:      i32,
-    using palette: Palette,
-    resolution:    [2]f32,
-    power:         f32,
+    max_iter:       i32,
+    using palette:  Palette,
+    interior_color: [4]f32,
+    resolution:     [2]f32,
+    power:          f32,
 }
 
 Fractal_Uniform :: struct {
@@ -130,6 +131,9 @@ Palette_Color_Changed :: struct {
 Mandelbrot_Power_Changed :: struct {
     value: f32,
 }
+Interior_Color_Changed :: struct {
+    value: [3]f32,
+}
 
 App_Event :: union {
     View_Reset,
@@ -142,6 +146,7 @@ App_Event :: union {
     Palette_Preset_Applied,
     Palette_Color_Changed,
     Mandelbrot_Power_Changed,
+    Interior_Color_Changed,
 }
 
 App_Events :: struct {
