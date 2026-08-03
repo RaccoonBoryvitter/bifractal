@@ -6,6 +6,8 @@ import "core:strings"
 
 import sdl "vendor:sdl3"
 
+import "app"
+
 main :: proc() {
     arg_c := (c.int)(len(os.args))
     arg_v := make([]cstring, arg_c)
@@ -25,15 +27,17 @@ main :: proc() {
         arg_v[i] = c_arg
     }
 
-    main_callback := proc "c" (argc: c.int, argv: [^]cstring) -> c.int {
-        return sdl.EnterAppMainCallbacks(
-            argc,
-            argv,
-            SDL_AppInit,
-            SDL_AppIterate,
-            SDL_AppEvent,
-            SDL_AppQuit,
-        )
-    }
     sdl.RunApp(arg_c, raw_data(arg_v), main_callback, nil)
+}
+
+@(private = "file")
+main_callback :: proc "c" (argc: c.int, argv: [^]cstring) -> c.int {
+    return sdl.EnterAppMainCallbacks(
+        argc,
+        argv,
+        app.SDL_AppInit,
+        app.SDL_AppIterate,
+        app.SDL_AppEvent,
+        app.SDL_AppQuit,
+    )
 }

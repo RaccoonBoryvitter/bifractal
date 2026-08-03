@@ -1,4 +1,4 @@
-package main
+package app
 
 import "core:log"
 import "core:math/rand"
@@ -8,6 +8,24 @@ import im "deps:imgui"
 import im_sdl "deps:imgui/imgui_impl_sdl3"
 import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 import sdl "vendor:sdl3"
+
+import "../events"
+import "../fractal"
+import "../geom"
+import "../palette"
+import "../platform"
+import "../ui"
+
+App_Context :: struct {
+    window:  platform.Window,
+    logger:  log.Logger,
+    gpu:     platform.Gpu_Context,
+    fractal: fractal.Fractal,
+    palette: palette.Palette_State,
+    ui:      ui.Ui_State,
+    time:    Time,
+    events:  events.App_Events,
+}
 
 create_app_logger :: proc() -> log.Logger {
     when ODIN_DEBUG {
@@ -20,34 +38,34 @@ create_app_logger :: proc() -> log.Logger {
 app_dispatch_events :: proc(state: ^App_Context) {
     for event in state.events.queue {
         switch e in event {
-        case View_Reset:
-            reset_fractal_view(&state.fractal.base)
-        case Max_Iter_Changed:
+        case events.View_Reset:
+            fractal.reset_fractal_view(&state.fractal.base)
+        case events.Max_Iter_Changed:
             state.fractal.base.max_iter = clamp(
                 e.value,
-                FRACTAL_MIN_ITERATIONS,
-                FRACTAL_MAX_ITERATIONS,
+                fractal.FRACTAL_MIN_ITERATIONS,
+                fractal.FRACTAL_MAX_ITERATIONS,
             )
-        case Window_Resized:
+        case events.Window_Resized:
             state.window.size = e.size
             state.fractal.base.resolution = {f32(e.size.w), f32(e.size.h)}
-            if resize_gpu_output(&state.gpu, e.size) == nil {
+            if platform.resize_gpu_output(&state.gpu, e.size) == nil {
                 state.gpu.valid = false
             }
-        case Palette_Banded_Changed:
+        case events.Palette_Banded_Changed:
             state.palette.banded = e.banded
-        case Palette_Mirrored:
-            mirror_palette(&state.fractal.base.palette)
-        case Palette_Rotated:
-            rotate_palette(&state.fractal.base.palette, e.delta)
-        case Palette_Randomized:
-            randomize_palette(
+        case events.Palette_Mirrored:
+            palette.mirror_palette(&state.fractal.base.palette)
+        case events.Palette_Rotated:
+            palette.rotate_palette(&state.fractal.base.palette, e.delta)
+        case events.Palette_Randomized:
+            palette.randomize_palette(
                 &state.fractal.base.palette,
                 rand.default_random_generator(&state.palette.rand_state),
             )
-        case Palette_Preset_Applied:
-            apply_palette_preset(&state.fractal.base.palette, e.preset)
-        case Palette_Color_Changed:
+        case events.Palette_Preset_Applied:
+            palette.apply_palette_preset(&state.fractal.base.palette, e.preset)
+        case events.Palette_Color_Changed:
             switch e.kind {
             case .Offset:
                 state.fractal.base.palette.offset = e.value
@@ -58,14 +76,14 @@ app_dispatch_events :: proc(state: ^App_Context) {
             case .Phase:
                 state.fractal.base.palette.phase = e.value
             }
-        case Mandelbrot_Power_Changed:
+        case events.Mandelbrot_Power_Changed:
             switch d in state.fractal.data {
-            case Mandelbrot_Data:
-                state.fractal.data = Mandelbrot_Data {
+            case fractal.Mandelbrot_Data:
+                state.fractal.data = fractal.Mandelbrot_Data {
                     power = e.value,
                 }
             }
-        case Interior_Color_Changed:
+        case events.Interior_Color_Changed:
             state.fractal.base.interior_color = {
                 e.value.r,
                 e.value.g,
@@ -91,6 +109,117 @@ sync_drag_cursor :: proc(state: ^App_Context) {
     if !sdl.SetCursor(target) {
         log.errorf("unable to set cursor: %s", sdl.GetError())
     }
+}
+
+init_app :: proc() -> ^App_Context {
+    state := new(App_Context)
+    state.logger = create_app_logger()
+    context.logger = state.logger
+
+    state.events.queue = make([dynamic]events.App_Event)
+
+    sdl.SetLogOutputFunction(platform.sdl_log_callback, &state.logger)
+    when ODIN_DEBUG {
+        sdl.SetLogPriorities(.DEBUG)
+    } else {
+        sdl.SetLogPriorities(.INFO)
+    }
+
+    ok := true
+    defer if !ok { destroy_app(state) }
+
+    state.window = platform.init_window()^
+    if state.window.handle == nil {
+        ok = false
+        return nil
+    }
+
+    sdl.GetWindowSizeInPixels(
+        state.window.handle,
+        (^i32)(&state.window.size.w),
+        (^i32)(&state.window.size.h),
+    )
+
+    state.gpu.device = platform.init_gpu(state.window.handle)
+    if state.gpu.device == nil {
+        ok = false
+        return nil
+    }
+
+    gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)
+    state.gpu.name = strings.clone(
+        string(
+            sdl.GetStringProperty(
+                gpu_props,
+                sdl.PROP_GPU_DEVICE_NAME_STRING,
+                "Unknown",
+            ),
+        ),
+    )
+    state.gpu.driver = strings.clone(
+        string(sdl.GetGPUDeviceDriver(state.gpu.device)),
+    )
+
+    state.gpu.pipeline = platform.create_compute_pipeline(
+        state.gpu.device,
+        fractal.MANDELBROT_SHADER,
+        fractal.MANDELBROT_SHADER_ENTRY,
+        platform.SHADER_FORMAT,
+    )
+    if state.gpu.pipeline == nil {
+        ok = false
+        return nil
+    }
+
+    if platform.resize_gpu_output(&state.gpu, state.window.size) == nil {
+        ok = false
+        return nil
+    }
+
+    state.gpu.valid = true
+
+    state.fractal = fractal.init_fractal_state(.Mandelbrot, state.window.size)
+
+    state.palette.rand_state = rand.create_u64(42)
+    state.time.last_ticks = sdl.GetTicks()
+
+    im.CHECKVERSION()
+    state.ui.ctx = im.CreateContext()
+    state.ui.selected_channel = .Red
+    imgui_io := im.GetIOImGuiContextPtr(state.ui.ctx)
+    imgui_io.ConfigFlags += {.NavEnableKeyboard, .DockingEnable}
+
+    system_theme := sdl.GetSystemTheme()
+    switch system_theme {
+    case .UNKNOWN:
+        im.StyleColorsClassic()
+    case .DARK:
+        im.StyleColorsDark()
+    case .LIGHT:
+        im.StyleColorsLight()
+    }
+
+    imgui_style := im.GetStyle()
+    main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
+    im.Style_ScaleAllSizes(imgui_style, main_scale)
+    imgui_style.FontScaleDpi = main_scale
+    imgui_io.ConfigDpiScaleFonts = true
+
+    im_sdl.InitForSDLGPU(state.window.handle)
+
+    init_info := im_sdlgpu.InitInfo {
+        Device               = state.gpu.device,
+        ColorTargetFormat    = sdl.GetGPUSwapchainTextureFormat(
+            state.gpu.device,
+            state.window.handle,
+        ),
+        MSAASamples          = ._1,
+        SwapchainComposition = .SDR,
+        PresentMode          = .VSYNC,
+    }
+    im_sdlgpu.Init(&init_info)
+
+    return state
 }
 
 destroy_app :: proc(state: ^App_Context) {
@@ -136,115 +265,4 @@ destroy_app :: proc(state: ^App_Context) {
         log.destroy_console_logger(state.logger)
     }
     free(state)
-}
-
-init_app :: proc() -> ^App_Context {
-    state := new(App_Context)
-    state.logger = create_app_logger()
-    context.logger = state.logger
-
-    state.events.queue = make([dynamic]App_Event)
-
-    sdl.SetLogOutputFunction(sdl_log_callback, &state.logger)
-    when ODIN_DEBUG {
-        sdl.SetLogPriorities(.DEBUG)
-    } else {
-        sdl.SetLogPriorities(.INFO)
-    }
-
-    ok := true
-    defer if !ok { destroy_app(state) }
-
-    state.window = init_window()^
-    if state.window.handle == nil {
-        ok = false
-        return nil
-    }
-
-    sdl.GetWindowSizeInPixels(
-        state.window.handle,
-        (^i32)(&state.window.size.w),
-        (^i32)(&state.window.size.h),
-    )
-
-    state.gpu.device = init_gpu(state.window.handle)
-    if state.gpu.device == nil {
-        ok = false
-        return nil
-    }
-
-    gpu_props := sdl.GetGPUDeviceProperties(state.gpu.device)
-    state.gpu.name = strings.clone(
-        string(
-            sdl.GetStringProperty(
-                gpu_props,
-                sdl.PROP_GPU_DEVICE_NAME_STRING,
-                "Unknown",
-            ),
-        ),
-    )
-    state.gpu.driver = strings.clone(
-        string(sdl.GetGPUDeviceDriver(state.gpu.device)),
-    )
-
-    state.gpu.pipeline = create_compute_pipeline(
-        state.gpu.device,
-        MANDELBROT_SHADER,
-        SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if state.gpu.pipeline == nil {
-        ok = false
-        return nil
-    }
-
-    if resize_gpu_output(&state.gpu, state.window.size) == nil {
-        ok = false
-        return nil
-    }
-
-    state.gpu.valid = true
-
-    state.fractal = init_fractal_state(.Mandelbrot, state.window.size)
-
-    state.palette.rand_state = rand.create_u64(42)
-    state.time.last_ticks = sdl.GetTicks()
-
-    im.CHECKVERSION()
-    state.ui.ctx = im.CreateContext()
-    state.ui.selected_channel = .Red
-    imgui_io := im.GetIOImGuiContextPtr(state.ui.ctx)
-    imgui_io.ConfigFlags += {.NavEnableKeyboard, .DockingEnable}
-
-    system_theme := sdl.GetSystemTheme()
-    switch system_theme {
-    case .UNKNOWN:
-        im.StyleColorsClassic()
-    case .DARK:
-        im.StyleColorsDark()
-    case .LIGHT:
-        im.StyleColorsLight()
-    }
-
-    imgui_style := im.GetStyle()
-    main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
-    im.Style_ScaleAllSizes(imgui_style, main_scale)
-    imgui_style.FontScaleDpi = main_scale
-    imgui_io.ConfigDpiScaleFonts = true
-
-    im_sdl.InitForSDLGPU(state.window.handle)
-
-    init_info := im_sdlgpu.InitInfo {
-        Device               = state.gpu.device,
-        ColorTargetFormat    = sdl.GetGPUSwapchainTextureFormat(
-            state.gpu.device,
-            state.window.handle,
-        ),
-        MSAASamples          = ._1,
-        SwapchainComposition = .SDR,
-        PresentMode          = .VSYNC,
-    }
-    im_sdlgpu.Init(&init_info)
-
-    return state
 }
