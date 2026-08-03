@@ -1,16 +1,15 @@
 package main
 
 import "core:log"
-import "core:mem"
 
 import "events"
 import "fractal"
 import "geom"
 import "palette"
 import "platform"
+import "render"
 import "ui"
 
-import sdl "vendor:sdl3"
 
 Vec2 :: geom.Vec2
 Extent_2D :: geom.Extent_2D
@@ -90,18 +89,15 @@ Interior_Color_Changed :: events.Interior_Color_Changed
 App_Event :: events.App_Event
 App_Events :: events.App_Events
 
-Frame_Pass :: enum {
-    None,
-    Compute,
-    Blit,
-    Ui,
-}
-
-Render_Context :: struct {
-    cmd:     ^sdl.GPUCommandBuffer,
-    scratch: mem.Arena,
-    pass:    Frame_Pass,
-}
+Frame_Pass :: render.Frame_Pass
+Render_Context :: render.Render_Context
+Render_View :: render.Render_View
+render_context_begin :: render.render_context_begin
+render_context_end :: render.render_context_end
+render_compute_pass :: render.render_compute_pass
+render_blit_pass :: render.render_blit_pass
+render_ui_pass :: render.render_ui_pass
+render_present_frame :: render.render_present_frame
 
 Time :: struct {
     frame_count: u32,

@@ -117,7 +117,13 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 
     app_dispatch_events(state)
 
-    return render_present_frame(state)
+    render_view := Render_View {
+        gpu         = &state.gpu,
+        fractal     = &state.fractal,
+        window      = state.window.handle,
+        window_size = state.window.size,
+    }
+    return render_present_frame(&render_view)
 }
 
 SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
