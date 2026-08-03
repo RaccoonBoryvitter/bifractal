@@ -6,6 +6,8 @@ import "core:mem"
 
 import "geom"
 import "palette"
+import "events"
+import "platform"
 
 import im "deps:imgui"
 import sdl "vendor:sdl3"
@@ -19,20 +21,16 @@ Channel :: enum {
     Blue,
 }
 
-Window :: struct {
-    handle: ^sdl.Window,
-    size:   Extent_2D,
-}
-
-Gpu_Context :: struct {
-    device:      ^sdl.GPUDevice,
-    pipeline:    ^sdl.GPUComputePipeline,
-    output:      ^sdl.GPUTexture,
-    output_size: Extent_2D,
-    name:        string,
-    driver:      string,
-    valid:       bool,
-}
+Window                    :: platform.Window
+Gpu_Context               :: platform.Gpu_Context
+init_window               :: platform.init_window
+init_gpu                  :: platform.init_gpu
+create_compute_pipeline   :: platform.create_compute_pipeline
+resize_gpu_output         :: platform.resize_gpu_output
+sdl_log_callback          :: platform.sdl_log_callback
+WINDOW_TITLE              :: platform.WINDOW_TITLE
+WINDOW_RESOLUTION         :: platform.WINDOW_RESOLUTION
+SHADER_FORMAT             :: platform.SHADER_FORMAT
 
 Palette :: palette.Palette
 Palette_Preset         :: palette.Palette_Preset
@@ -99,52 +97,19 @@ Fractal :: struct {
     move_cursor:    ^sdl.Cursor,
 }
 
-View_Reset :: struct {}
-Max_Iter_Changed :: struct {
-    value: i32,
-}
-Window_Resized :: struct {
-    size: Extent_2D,
-}
-Palette_Banded_Changed :: struct {
-    banded: bool,
-}
-Palette_Mirrored :: struct {}
-Palette_Rotated :: struct {
-    delta: f32,
-}
-Palette_Randomized :: struct {}
-Palette_Preset_Applied :: struct {
-    preset: Palette_Preset,
-}
-Palette_Color_Changed :: struct {
-    kind:  Palette_Color_Kind,
-    value: [4]f32,
-}
-Mandelbrot_Power_Changed :: struct {
-    value: f32,
-}
-Interior_Color_Changed :: struct {
-    value: [3]f32,
-}
-
-App_Event :: union {
-    View_Reset,
-    Max_Iter_Changed,
-    Window_Resized,
-    Palette_Banded_Changed,
-    Palette_Mirrored,
-    Palette_Rotated,
-    Palette_Randomized,
-    Palette_Preset_Applied,
-    Palette_Color_Changed,
-    Mandelbrot_Power_Changed,
-    Interior_Color_Changed,
-}
-
-App_Events :: struct {
-    queue: [dynamic]App_Event,
-}
+View_Reset                  :: events.View_Reset
+Max_Iter_Changed            :: events.Max_Iter_Changed
+Window_Resized              :: events.Window_Resized
+Palette_Banded_Changed      :: events.Palette_Banded_Changed
+Palette_Mirrored            :: events.Palette_Mirrored
+Palette_Rotated             :: events.Palette_Rotated
+Palette_Randomized          :: events.Palette_Randomized
+Palette_Preset_Applied      :: events.Palette_Preset_Applied
+Palette_Color_Changed       :: events.Palette_Color_Changed
+Mandelbrot_Power_Changed    :: events.Mandelbrot_Power_Changed
+Interior_Color_Changed      :: events.Interior_Color_Changed
+App_Event                   :: events.App_Event
+App_Events                  :: events.App_Events
 
 Frame_Pass :: enum {
     None,

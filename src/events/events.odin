@@ -1,0 +1,61 @@
+package events
+
+import "../geom"
+import "../palette"
+
+View_Reset :: struct {}
+
+Max_Iter_Changed :: struct {
+	value: i32,
+}
+
+Window_Resized :: struct {
+	size: geom.Extent_2D,
+}
+
+Palette_Banded_Changed :: struct {
+	banded: bool,
+}
+
+Palette_Mirrored :: struct {}
+
+Palette_Rotated :: struct {
+	delta: f32,
+}
+
+Palette_Randomized :: struct {}
+
+Palette_Preset_Applied :: struct {
+	preset: palette.Palette_Preset,
+}
+
+Palette_Color_Changed :: struct {
+	kind:  palette.Palette_Color_Kind,
+	value: [4]f32,
+}
+
+Mandelbrot_Power_Changed :: struct {
+	value: f32,
+}
+
+Interior_Color_Changed :: struct {
+	value: [3]f32,
+}
+
+App_Event :: union {
+	View_Reset,
+	Max_Iter_Changed,
+	Window_Resized,
+	Palette_Banded_Changed,
+	Palette_Mirrored,
+	Palette_Rotated,
+	Palette_Randomized,
+	Palette_Preset_Applied,
+	Palette_Color_Changed,
+	Mandelbrot_Power_Changed,
+	Interior_Color_Changed,
+}
+
+App_Events :: struct {
+	queue: [dynamic]App_Event,
+}

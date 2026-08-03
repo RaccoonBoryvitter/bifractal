@@ -9,62 +9,6 @@ import im_sdl "deps:imgui/imgui_impl_sdl3"
 import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 import sdl "vendor:sdl3"
 
-init_window :: proc() -> ^sdl.Window {
-    ok := sdl.Init({.VIDEO, .EVENTS})
-    if !ok {
-        log.errorf("unable to initialize SDL: %s", sdl.GetError())
-        return nil
-    }
-
-    main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
-    window := sdl.CreateWindow(
-        WINDOW_TITLE,
-        i32(f32(WINDOW_RESOLUTION.w) * main_scale), // I will eventually come up
-        i32(f32(WINDOW_RESOLUTION.h) * main_scale), // with a better solution
-        {.RESIZABLE, .HIGH_PIXEL_DENSITY},
-    )
-    if window == nil {
-        log.errorf("unable to create SDL window: %s", sdl.GetError())
-        sdl.Quit()
-        return nil
-    }
-
-    sdl.SetWindowPosition(
-        window,
-        sdl.WINDOWPOS_CENTERED,
-        sdl.WINDOWPOS_CENTERED,
-    )
-
-    return window
-}
-
-init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
-    gpu_device := sdl.CreateGPUDevice({.SPIRV, .DXIL, .MSL}, true, nil)
-    if gpu_device == nil {
-        log.errorf("unable to create SDL GPU device: %s", sdl.GetError())
-        return nil
-    }
-
-    ok := sdl.ClaimWindowForGPUDevice(gpu_device, window)
-    if !ok {
-        log.errorf("unable to claim window for GPU device: %s", sdl.GetError())
-        sdl.DestroyGPUDevice(gpu_device)
-        return nil
-    }
-
-    ok = sdl.SetGPUSwapchainParameters(gpu_device, window, .SDR, .VSYNC)
-    if !ok {
-        log.warnf("unable to set swapchain parameters: %s", sdl.GetError())
-    }
-
-    ok = sdl.SetGPUAllowedFramesInFlight(gpu_device, 2)
-    if !ok {
-        log.warnf("unable to set frames in flight: %s", sdl.GetError())
-    }
-
-    return gpu_device
-}
-
 create_app_logger :: proc() -> log.Logger {
     when ODIN_DEBUG {
         return log.create_console_logger(.Debug)
@@ -221,7 +165,12 @@ init_app :: proc() -> ^App_Context {
         string(sdl.GetGPUDeviceDriver(state.gpu.device)),
     )
 
-    state.gpu.pipeline = create_compute_pipeline(state.gpu.device)
+    state.gpu.pipeline = create_compute_pipeline(
+        state.gpu.device,
+        MANDELBROT_SHADER,
+        SHADER_ENTRY,
+        SHADER_FORMAT,
+    )
     if state.gpu.pipeline == nil {
         ok = false
         return nil

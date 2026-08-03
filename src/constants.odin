@@ -1,12 +1,5 @@
 package main
 
-// Window configuration
-WINDOW_TITLE :: "Odin Zoom"
-WINDOW_RESOLUTION :: Extent_2D {
-    w = 1280,
-    h = 720,
-}
-
 // UI configuration
 MAX_UI_VERTICES :: 65536
 UI_CONTROL_WINDOW_WIDTH :: 360
