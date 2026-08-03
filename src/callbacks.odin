@@ -10,7 +10,6 @@ import im "deps:imgui"
 import im_sdl "deps:imgui/imgui_impl_sdl3"
 import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 
-@(export)
 SDL_AppInit :: proc "c" (
     appstate: ^rawptr,
     argc: c.int,
@@ -27,7 +26,6 @@ SDL_AppInit :: proc "c" (
     return .CONTINUE
 }
 
-@(export)
 SDL_AppEvent :: proc "c" (
     appstate: rawptr,
     event: ^sdl.Event,
@@ -90,7 +88,6 @@ fps_update :: proc(state: ^App_Context) {
     }
 }
 
-@(export)
 SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     context = runtime.default_context()
     defer free_all(context.temp_allocator)
@@ -104,13 +101,25 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     im_sdlgpu.NewFrame()
     im.NewFrame()
 
-    create_imgui_ui(state)
+    view := Ui_View {
+        ui_state      = &state.ui,
+        fractal       = &state.fractal,
+        palette_state = &state.palette,
+        events        = &state.events,
+        window_size   = state.window.size,
+        pixel_scale   = get_window_pixel_scale(state.window.handle),
+        gpu_name      = state.gpu.name,
+        gpu_driver    = state.gpu.driver,
+        fps           = state.time.current,
+        frame_time_ms = 1000.0 / max(state.time.current, 0.001),
+    }
+    create_imgui_ui(&view)
+
     app_dispatch_events(state)
 
     return render_present_frame(state)
 }
 
-@(export)
 SDL_AppQuit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
     context = runtime.default_context()
     state := (^App_Context)(appstate)

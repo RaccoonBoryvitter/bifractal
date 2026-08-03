@@ -8,18 +8,17 @@ import "fractal"
 import "geom"
 import "palette"
 import "platform"
+import "ui"
 
-import im "deps:imgui"
 import sdl "vendor:sdl3"
 
 Vec2 :: geom.Vec2
 Extent_2D :: geom.Extent_2D
 
-Channel :: enum {
-    Red,
-    Green,
-    Blue,
-}
+Channel :: ui.Channel
+Ui_State :: ui.Ui_State
+Ui_View :: ui.Ui_View
+create_imgui_ui :: ui.create_imgui_ui
 
 Window :: platform.Window
 Gpu_Context :: platform.Gpu_Context
@@ -44,7 +43,6 @@ cosine_palette_cpu :: palette.cosine_palette_cpu
 palette_create_samples :: palette.palette_create_samples
 PALETTE_SWATCH_STEPS :: palette.PALETTE_SWATCH_STEPS
 PALETTE_PRESET_SWATCH_STEPS :: palette.PALETTE_PRESET_SWATCH_STEPS
-PALETTE_SWATCH_WIDTH :: palette.PALETTE_SWATCH_WIDTH
 PALETTE_PRESETS :: palette.PALETTE_PRESETS
 
 Fractal_Kind :: fractal.Fractal_Kind
@@ -103,12 +101,6 @@ Render_Context :: struct {
     cmd:     ^sdl.GPUCommandBuffer,
     scratch: mem.Arena,
     pass:    Frame_Pass,
-}
-
-Ui_State :: struct {
-    ctx:              ^im.Context,
-    mouse_complex:    complex64,
-    selected_channel: Channel,
 }
 
 Time :: struct {

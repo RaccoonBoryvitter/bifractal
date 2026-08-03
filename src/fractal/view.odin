@@ -21,9 +21,9 @@ view_screen_to_complex :: proc(
 
 get_window_pixel_scale :: proc(window: ^sdl.Window) -> geom.Vec2 {
     logical_w, logical_h: i32
-	sdl.GetWindowSize(window, &logical_w, &logical_h)
+    sdl.GetWindowSize(window, &logical_w, &logical_h)
 
-	if logical_w <= 0 || logical_h <= 0 {
+    if logical_w <= 0 || logical_h <= 0 {
         return geom.Vec2{1, 1}
     }
 
