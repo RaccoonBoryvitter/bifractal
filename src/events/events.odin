@@ -2,6 +2,7 @@ package events
 
 import "../geom"
 import "../palette"
+import "../fractal"
 
 View_Reset :: struct {}
 
@@ -34,12 +35,20 @@ Palette_Color_Changed :: struct {
 	value: [4]f32,
 }
 
+Interior_Color_Changed :: struct {
+	value: [3]f32,
+}
+
+Fractal_Kind_Changed :: struct {
+	value: fractal.Fractal_Kind,
+}
+
 Mandelbrot_Power_Changed :: struct {
 	value: f32,
 }
 
-Interior_Color_Changed :: struct {
-	value: [3]f32,
+Julia_Constant_Changed :: struct {
+	value: complex64,
 }
 
 App_Event :: union {
@@ -52,8 +61,10 @@ App_Event :: union {
 	Palette_Randomized,
 	Palette_Preset_Applied,
 	Palette_Color_Changed,
-	Mandelbrot_Power_Changed,
 	Interior_Color_Changed,
+	Fractal_Kind_Changed,
+	Mandelbrot_Power_Changed,
+	Julia_Constant_Changed,
 }
 
 App_Events :: struct {

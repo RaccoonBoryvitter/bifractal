@@ -4,8 +4,8 @@ import "core:log"
 import "core:mem"
 
 import im "deps:imgui"
-import sdl "vendor:sdl3"
 import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
+import sdl "vendor:sdl3"
 
 import "../fractal"
 import "../geom"
@@ -13,6 +13,7 @@ import "../platform"
 
 Render_View :: struct {
     gpu:         ^platform.Gpu_Context,
+    kind:        fractal.Fractal_Kind,
     fractal:     ^fractal.Fractal,
     window:      ^sdl.Window,
     window_size: geom.Extent_2D,
@@ -61,7 +62,7 @@ render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
         nil,
         0,
     )
-    sdl.BindGPUComputePipeline(compute_pass, view.gpu.pipeline)
+    sdl.BindGPUComputePipeline(compute_pass, view.gpu.pipelines[view.kind])
 
     uniform_size := fractal.fractal_uniform_size(view.fractal)
     uniform, alloc_err := mem.arena_alloc(&ctx.scratch, uniform_size)

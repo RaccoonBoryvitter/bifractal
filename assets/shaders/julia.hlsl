@@ -2,6 +2,7 @@
 
 RWTexture2D<float4> output_image : register(u0, space1);
 
+
 cbuffer UniformBlock : register(b0, space2) {
     float2 center;
     float  zoom;
@@ -15,7 +16,7 @@ cbuffer UniformBlock : register(b0, space2) {
     float4 interior_color;
 
     float2 resolution;
-    float  power;
+    float2 constant;
 };
 
 [numthreads(8, 8, 1)]
@@ -25,10 +26,10 @@ void main(uint3 global_id : SV_DispatchThreadID) {
 
     float2 uv = (float2(pixel) - resolution * 0.5) / (resolution.y * zoom) + center;
 
-    float2 z = float2(0.0, 0.0);
+    float2 z = uv;
     int iter = 0;
     while (iter < max_iter && dot(z, z) < 4.0) {
-        z = complex_pow(z, power) + uv;
+        z = complex_pow(z, 2) + constant;
         iter++;
     }
 

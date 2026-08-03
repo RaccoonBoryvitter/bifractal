@@ -5,6 +5,7 @@ import "../palette"
 
 Fractal_Kind :: enum {
     Mandelbrot,
+    Julia,
 }
 
 Fractal_View :: struct {
@@ -48,8 +49,13 @@ Mandelbrot_Data :: struct {
     power: f32,
 }
 
+Julia_Data :: struct {
+    constant: complex64,
+}
+
 Fractal_Data :: union {
     Mandelbrot_Data,
+    Julia_Data,
 }
 
 Fractal :: struct {

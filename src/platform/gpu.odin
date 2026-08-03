@@ -2,11 +2,13 @@ package platform
 
 import "core:log"
 import sdl "vendor:sdl3"
+
 import "../geom"
+import "../fractal"
 
 Gpu_Context :: struct {
 	device:      ^sdl.GPUDevice,
-	pipeline:    ^sdl.GPUComputePipeline,
+	pipelines:   map[fractal.Fractal_Kind]^sdl.GPUComputePipeline,
 	output:      ^sdl.GPUTexture,
 	output_size: geom.Extent_2D,
 	name:        string,
@@ -39,6 +41,26 @@ init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
 	}
 
 	return gpu_device
+}
+
+create_compute_pipelines :: proc(
+	device: ^sdl.GPUDevice,
+) -> map[fractal.Fractal_Kind]^sdl.GPUComputePipeline
+{
+	pipes := make(map[fractal.Fractal_Kind]^sdl.GPUComputePipeline)
+	pipes[.Mandelbrot] = create_compute_pipeline(
+		device,
+		fractal.MANDELBROT_SHADER,
+		fractal.MANDELBROT_SHADER_ENTRY,
+		SHADER_FORMAT,
+	)
+	pipes[.Julia] = create_compute_pipeline(
+		device,
+		fractal.JULIA_SHADER,
+		fractal.JULIA_SHADER_ENTRY,
+		SHADER_FORMAT,
+	)
+	return pipes
 }
 
 create_compute_pipeline :: proc(

@@ -76,19 +76,31 @@ app_dispatch_events :: proc(state: ^App_Context) {
             case .Phase:
                 state.fractal.base.palette.phase = e.value
             }
-        case events.Mandelbrot_Power_Changed:
-            switch d in state.fractal.data {
-            case fractal.Mandelbrot_Data:
-                state.fractal.data = fractal.Mandelbrot_Data {
-                    power = e.value,
-                }
-            }
         case events.Interior_Color_Changed:
             state.fractal.base.interior_color = {
                 e.value.r,
                 e.value.g,
                 e.value.b,
                 1.0,
+            }
+        case events.Fractal_Kind_Changed:
+            state.fractal = fractal.init_fractal_state(e.value, geom.Extent_2D {
+                w = u32(state.fractal.base.resolution.x),
+                h = u32(state.fractal.base.resolution.y),
+            })
+        case events.Mandelbrot_Power_Changed:
+            #partial switch d in state.fractal.data {
+            case fractal.Mandelbrot_Data:
+                state.fractal.data = fractal.Mandelbrot_Data {
+                    power = e.value,
+                }
+            }
+		case events.Julia_Constant_Changed:
+			#partial switch d in state.fractal.data {
+            case fractal.Julia_Data:
+                state.fractal.data = fractal.Julia_Data {
+                    constant = e.value,
+                }
             }
         }
     }
@@ -160,13 +172,8 @@ init_app :: proc() -> ^App_Context {
         string(sdl.GetGPUDeviceDriver(state.gpu.device)),
     )
 
-    state.gpu.pipeline = platform.create_compute_pipeline(
-        state.gpu.device,
-        fractal.MANDELBROT_SHADER,
-        fractal.MANDELBROT_SHADER_ENTRY,
-        platform.SHADER_FORMAT,
-    )
-    if state.gpu.pipeline == nil {
+	state.gpu.pipelines = platform.create_compute_pipelines(state.gpu.device)
+    if state.gpu.pipelines == nil || len(state.gpu.pipelines) == 0 {
         ok = false
         return nil
     }
@@ -243,8 +250,10 @@ destroy_app :: proc(state: ^App_Context) {
     if state.gpu.output != nil && state.gpu.device != nil {
         sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.output)
     }
-    if state.gpu.pipeline != nil && state.gpu.device != nil {
-        sdl.ReleaseGPUComputePipeline(state.gpu.device, state.gpu.pipeline)
+    if state.gpu.pipelines != nil && state.gpu.device != nil {
+		for _, pipeline in state.gpu.pipelines {
+			sdl.ReleaseGPUComputePipeline(state.gpu.device, pipeline)
+		}
     }
 
     if state.gpu.device != nil {

@@ -1,0 +1,43 @@
+package fractal
+
+import "../palette"
+import "core:mem"
+
+Julia_Params :: struct {
+    max_iter:       i32,
+    using palette:  palette.Palette,
+    interior_color: [4]f32,
+    resolution:     [2]f32,
+    constant:       complex64,
+}
+
+Julia_Uniform :: struct {
+    center:       [2]f32,
+    zoom:         f32,
+    using params: Julia_Params,
+}
+
+julia_make_uniform :: proc(
+    base: ^Fractal_Base,
+    data: ^Julia_Data,
+    dst: rawptr,
+) -> (
+    size: int,
+    ok: bool,
+) {
+    uniform := Julia_Uniform {
+        center = base.camera.view.center,
+        zoom = base.camera.view.zoom,
+        params = Julia_Params {
+            max_iter = base.max_iter,
+            palette = base.palette,
+            interior_color = base.interior_color,
+            resolution = base.resolution,
+            constant = data.constant,
+        },
+    }
+
+    size = size_of(Julia_Uniform)
+    mem.copy(dst, &uniform, size)
+    return size, true
+}

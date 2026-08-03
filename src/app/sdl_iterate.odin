@@ -57,6 +57,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     render_view := render.Render_View {
         gpu         = &state.gpu,
         fractal     = &state.fractal,
+        kind        = state.fractal.kind,
         window      = state.window.handle,
         window_size = state.window.size,
     }
