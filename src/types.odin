@@ -1,12 +1,12 @@
 package main
 
 import "core:log"
-import "core:math/rand"
 import "core:mem"
 
+import "events"
+import "fractal"
 import "geom"
 import "palette"
-import "events"
 import "platform"
 
 import im "deps:imgui"
@@ -21,95 +21,76 @@ Channel :: enum {
     Blue,
 }
 
-Window                    :: platform.Window
-Gpu_Context               :: platform.Gpu_Context
-init_window               :: platform.init_window
-init_gpu                  :: platform.init_gpu
-create_compute_pipeline   :: platform.create_compute_pipeline
-resize_gpu_output         :: platform.resize_gpu_output
-sdl_log_callback          :: platform.sdl_log_callback
-WINDOW_TITLE              :: platform.WINDOW_TITLE
-WINDOW_RESOLUTION         :: platform.WINDOW_RESOLUTION
-SHADER_FORMAT             :: platform.SHADER_FORMAT
+Window :: platform.Window
+Gpu_Context :: platform.Gpu_Context
+init_window :: platform.init_window
+init_gpu :: platform.init_gpu
+create_compute_pipeline :: platform.create_compute_pipeline
+resize_gpu_output :: platform.resize_gpu_output
+sdl_log_callback :: platform.sdl_log_callback
+WINDOW_TITLE :: platform.WINDOW_TITLE
+WINDOW_RESOLUTION :: platform.WINDOW_RESOLUTION
+SHADER_FORMAT :: platform.SHADER_FORMAT
 
 Palette :: palette.Palette
-Palette_Preset         :: palette.Palette_Preset
-Palette_State          :: palette.Palette_State
-Palette_Color_Kind     :: palette.Palette_Color_Kind
-apply_palette_preset   :: palette.apply_palette_preset
-mirror_palette         :: palette.mirror_palette
-rotate_palette         :: palette.rotate_palette
-randomize_palette      :: palette.randomize_palette
-cosine_palette_cpu     :: palette.cosine_palette_cpu
+Palette_Preset :: palette.Palette_Preset
+Palette_State :: palette.Palette_State
+Palette_Color_Kind :: palette.Palette_Color_Kind
+apply_palette_preset :: palette.apply_palette_preset
+mirror_palette :: palette.mirror_palette
+rotate_palette :: palette.rotate_palette
+randomize_palette :: palette.randomize_palette
+cosine_palette_cpu :: palette.cosine_palette_cpu
 palette_create_samples :: palette.palette_create_samples
-PALETTE_SWATCH_STEPS          :: palette.PALETTE_SWATCH_STEPS
-PALETTE_PRESET_SWATCH_STEPS   :: palette.PALETTE_PRESET_SWATCH_STEPS
-PALETTE_SWATCH_WIDTH          :: palette.PALETTE_SWATCH_WIDTH
-PALETTE_PRESETS               :: palette.PALETTE_PRESETS
+PALETTE_SWATCH_STEPS :: palette.PALETTE_SWATCH_STEPS
+PALETTE_PRESET_SWATCH_STEPS :: palette.PALETTE_PRESET_SWATCH_STEPS
+PALETTE_SWATCH_WIDTH :: palette.PALETTE_SWATCH_WIDTH
+PALETTE_PRESETS :: palette.PALETTE_PRESETS
 
-Fractal_View :: struct {
-    center: [2]f32,
-    zoom:   f32,
-}
+Fractal_Kind :: fractal.Fractal_Kind
+Fractal_View :: fractal.Fractal_View
+Fractal_Camera :: fractal.Fractal_Camera
+Fractal_Command :: fractal.Fractal_Command
+Fractal_Input :: fractal.Fractal_Input
+Fractal_Base :: fractal.Fractal_Base
+Fractal_Data :: fractal.Fractal_Data
+Mandelbrot_Data :: fractal.Mandelbrot_Data
+Fractal :: fractal.Fractal
+Fractal_Params :: fractal.Mandelbrot_Params
+Fractal_Uniform :: fractal.Mandelbrot_Uniform
+MANDELBROT_SHADER :: fractal.MANDELBROT_SHADER
+SHADER_ENTRY :: fractal.MANDELBROT_SHADER_ENTRY
+view_screen_to_complex :: fractal.view_screen_to_complex
+get_window_pixel_scale :: fractal.get_window_pixel_scale
+reset_fractal_view :: fractal.reset_fractal_view
+fractal_process_input :: fractal.fractal_process_input
+fractal_apply_command :: fractal.fractal_apply_command
+init_fractal_state :: fractal.init_fractal_state
+fractal_uniform_size :: fractal.fractal_uniform_size
+fractal_make_uniform :: fractal.fractal_make_uniform
+FRACTAL_PAN_FACTOR :: fractal.FRACTAL_PAN_FACTOR
+FRACTAL_ZOOM_SCROLL_FACTOR :: fractal.FRACTAL_ZOOM_SCROLL_FACTOR
+FRACTAL_MOUSE_DRAG_SCALE :: fractal.FRACTAL_MOUSE_DRAG_SCALE
+FRACTAL_MIN_ZOOM :: fractal.FRACTAL_MIN_ZOOM
+FRACTAL_MIN_ZOOM_LOG :: fractal.FRACTAL_MIN_ZOOM_LOG
+FRACTAL_MIN_ITERATIONS :: fractal.FRACTAL_MIN_ITERATIONS
+FRACTAL_MAX_ITERATIONS :: fractal.FRACTAL_MAX_ITERATIONS
+FRACTAL_ITERATION_STEP :: fractal.FRACTAL_ITERATION_STEP
+FRACTAL_ITERATION_DECREASE_STEP :: fractal.FRACTAL_ITERATION_DECREASE_STEP
 
-Fractal_Camera :: struct {
-    view:        Fractal_View,
-    is_dragging: bool,
-    drag_start:  Vec2,
-}
-
-Fractal_Command :: enum {
-    None,
-    Pan,
-    Zoom,
-    Reset_View,
-    Increase_Iter,
-    Decrease_Iter,
-    Drag_Start,
-    Drag_End,
-}
-
-Fractal_Input :: struct {
-    cmd:   Fractal_Command,
-    pos:   Vec2,
-    delta: Vec2,
-}
-
-Fractal_Params :: struct {
-    max_iter:       i32,
-    using palette:  Palette,
-    interior_color: [4]f32,
-    resolution:     [2]f32,
-    power:          f32,
-}
-
-Fractal_Uniform :: struct {
-    center:       [2]f32,
-    zoom:         f32,
-    using params: Fractal_Params,
-}
-
-Fractal :: struct {
-    camera:         Fractal_Camera,
-    params:         Fractal_Params,
-    zoom_level:     f32,
-    default_cursor: ^sdl.Cursor,
-    move_cursor:    ^sdl.Cursor,
-}
-
-View_Reset                  :: events.View_Reset
-Max_Iter_Changed            :: events.Max_Iter_Changed
-Window_Resized              :: events.Window_Resized
-Palette_Banded_Changed      :: events.Palette_Banded_Changed
-Palette_Mirrored            :: events.Palette_Mirrored
-Palette_Rotated             :: events.Palette_Rotated
-Palette_Randomized          :: events.Palette_Randomized
-Palette_Preset_Applied      :: events.Palette_Preset_Applied
-Palette_Color_Changed       :: events.Palette_Color_Changed
-Mandelbrot_Power_Changed    :: events.Mandelbrot_Power_Changed
-Interior_Color_Changed      :: events.Interior_Color_Changed
-App_Event                   :: events.App_Event
-App_Events                  :: events.App_Events
+View_Reset :: events.View_Reset
+Max_Iter_Changed :: events.Max_Iter_Changed
+Window_Resized :: events.Window_Resized
+Palette_Banded_Changed :: events.Palette_Banded_Changed
+Palette_Mirrored :: events.Palette_Mirrored
+Palette_Rotated :: events.Palette_Rotated
+Palette_Randomized :: events.Palette_Randomized
+Palette_Preset_Applied :: events.Palette_Preset_Applied
+Palette_Color_Changed :: events.Palette_Color_Changed
+Mandelbrot_Power_Changed :: events.Mandelbrot_Power_Changed
+Interior_Color_Changed :: events.Interior_Color_Changed
+App_Event :: events.App_Event
+App_Events :: events.App_Events
 
 Frame_Pass :: enum {
     None,

@@ -45,13 +45,16 @@ create_imgui_ui :: proc(state: ^App_Context) {
 @(private = "file")
 draw_view_tab :: proc(state: ^App_Context) {
     im.Text(
-        fmt.ctprintf("Zoom: %s", format_zoom(state.fractal.camera.view.zoom)),
+        fmt.ctprintf(
+            "Zoom: %s",
+            format_zoom(state.fractal.base.camera.view.zoom),
+        ),
     )
     im.Text(
         fmt.ctprintf(
             "Center: %+.6f %+.6fi",
-            state.fractal.camera.view.center.x,
-            state.fractal.camera.view.center.y,
+            state.fractal.base.camera.view.center.x,
+            state.fractal.base.camera.view.center.y,
         ),
     )
 
@@ -59,9 +62,9 @@ draw_view_tab :: proc(state: ^App_Context) {
     _ = sdl.GetMouseState(&mouse_x, &mouse_y)
     scale := get_window_pixel_scale(state.window.handle)
     state.ui.mouse_complex = view_screen_to_complex(
-        Vec2{mouse_x * scale.x, mouse_y * scale.y},
+        {mouse_x * scale.x, mouse_y * scale.y},
         state.window.size,
-        state.fractal.camera.view,
+        state.fractal.base.camera.view,
     )
     im.Text(
         fmt.ctprintf(
@@ -78,7 +81,7 @@ draw_view_tab :: proc(state: ^App_Context) {
 
 @(private = "file")
 draw_fractal_tab :: proc(state: ^App_Context) {
-    max_iter := state.fractal.params.max_iter
+    max_iter := state.fractal.base.max_iter
     if im.SliderInt(
         "Iterations",
         &max_iter,
@@ -88,19 +91,25 @@ draw_fractal_tab :: proc(state: ^App_Context) {
         append(&state.events.queue, Max_Iter_Changed{value = max_iter})
     }
 
-    power := state.fractal.params.power
-    if im.SliderFloat("Power", &power, 1.5, 6.0) {
-        append(&state.events.queue, Mandelbrot_Power_Changed{value = power})
+    switch d in state.fractal.data {
+    case Mandelbrot_Data:
+        power := d.power
+        if im.SliderFloat("Power", &power, 1.5, 6.0) {
+            append(
+                &state.events.queue,
+                Mandelbrot_Power_Changed{value = power},
+            )
+        }
     }
 }
 
 @(private = "file")
 draw_palette_tab :: proc(state: ^App_Context) {
-    interior_color := state.fractal.params.interior_color.rgb
+    interior_color := state.fractal.base.interior_color.rgb
     if im.ColorEdit3("Interior", &interior_color) {
         append(
             &state.events.queue,
-            Interior_Color_Changed{value = interior_color}
+            Interior_Color_Changed{value = interior_color},
         )
     }
 
@@ -109,7 +118,7 @@ draw_palette_tab :: proc(state: ^App_Context) {
         state.ui.selected_channel = new_channel.(Channel)
     }
 
-    offset := state.fractal.params.palette.offset
+    offset := state.fractal.base.palette.offset
     if draw_palette_params_slider(
         "Offset",
         &offset,
@@ -121,7 +130,7 @@ draw_palette_tab :: proc(state: ^App_Context) {
         )
     }
 
-    amplitude := state.fractal.params.palette.amplitude
+    amplitude := state.fractal.base.palette.amplitude
     if draw_palette_params_slider(
         "Amplitude",
         &amplitude,
@@ -133,7 +142,7 @@ draw_palette_tab :: proc(state: ^App_Context) {
         )
     }
 
-    frequency := state.fractal.params.palette.frequency
+    frequency := state.fractal.base.palette.frequency
     if draw_palette_params_slider(
         "Frequency",
         &frequency,
@@ -145,7 +154,7 @@ draw_palette_tab :: proc(state: ^App_Context) {
         )
     }
 
-    phase := state.fractal.params.palette.phase
+    phase := state.fractal.base.palette.phase
     if draw_palette_params_slider("Phase", &phase, state.ui.selected_channel) {
         append(
             &state.events.queue,
@@ -156,7 +165,7 @@ draw_palette_tab :: proc(state: ^App_Context) {
     draw_list := im.GetWindowDrawList()
 
     draw_palette_waveform(
-        state.fractal.params.palette,
+        state.fractal.base.palette,
         state.ui.selected_channel,
         draw_list,
         context.temp_allocator,
@@ -177,11 +186,12 @@ draw_palette_tab :: proc(state: ^App_Context) {
             draw_list,
             pos,
             size,
-            &state.fractal.params,
+            state.fractal.base.max_iter,
+            state.fractal.base.palette,
         )
     }
      else {
-        draw_gradient_swatch(draw_list, pos, size, &state.fractal.params)
+        draw_gradient_swatch(draw_list, pos, size, state.fractal.base.palette)
     }
 
     if im.Button("Mirror") {
@@ -243,12 +253,12 @@ draw_gradient_swatch :: proc(
     draw_list: ^im.DrawList,
     pos: im.Vec2,
     size: im.Vec2,
-    params: ^Fractal_Params,
+    palette: Palette,
 ) {
     step_w := size.x / f32(PALETTE_SWATCH_STEPS)
     for i in 0 ..< PALETTE_SWATCH_STEPS {
         t := f32(i) / f32(PALETTE_SWATCH_STEPS - 1)
-        color := cosine_palette_cpu(t, params.palette)
+        color := cosine_palette_cpu(t, palette)
         col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
         x0 := pos.x + f32(i) * step_w
         x1 := x0 + step_w + 1
@@ -266,17 +276,14 @@ draw_banded_gradient_swatch :: proc(
     draw_list: ^im.DrawList,
     pos: im.Vec2,
     size: im.Vec2,
-    params: ^Fractal_Params,
+    max_iter: i32,
+    palette: Palette,
 ) {
-    bands := clamp(
-        params.max_iter,
-        FRACTAL_MIN_ITERATIONS,
-        i32(PALETTE_SWATCH_STEPS),
-    )
+    bands := clamp(max_iter, FRACTAL_MIN_ITERATIONS, i32(PALETTE_SWATCH_STEPS))
     step_w := size.x / f32(bands)
     for i in 0 ..< bands {
         t := f32(i) / f32(bands)
-        color := cosine_palette_cpu(t, params.palette)
+        color := cosine_palette_cpu(t, palette)
         col := im.ColorConvertFloat4ToU32({color.r, color.g, color.b, 1})
         x0 := pos.x + f32(i) * step_w
         x1 := x0 + step_w + 1

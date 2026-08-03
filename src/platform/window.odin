@@ -11,11 +11,13 @@ WINDOW_RESOLUTION :: geom.Extent_2D {
 }
 
 Window :: struct {
-	handle: ^sdl.Window,
-	size:   geom.Extent_2D,
+	handle:         ^sdl.Window,
+	size:           geom.Extent_2D,
+	default_cursor: ^sdl.Cursor,
+	move_cursor:    ^sdl.Cursor,
 }
 
-init_window :: proc() -> ^sdl.Window {
+init_window :: proc() -> ^Window {
 	ok := sdl.Init({.VIDEO, .EVENTS})
 	if !ok {
 		log.errorf("unable to initialize SDL: %s", sdl.GetError())
@@ -23,23 +25,27 @@ init_window :: proc() -> ^sdl.Window {
 	}
 
 	main_scale := sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay())
-	window := sdl.CreateWindow(
+	handle := sdl.CreateWindow(
 		WINDOW_TITLE,
 		i32(f32(WINDOW_RESOLUTION.w) * main_scale),
 		i32(f32(WINDOW_RESOLUTION.h) * main_scale),
 		{.RESIZABLE, .HIGH_PIXEL_DENSITY},
 	)
-	if window == nil {
+	if handle == nil {
 		log.errorf("unable to create SDL window: %s", sdl.GetError())
 		sdl.Quit()
 		return nil
 	}
 
 	sdl.SetWindowPosition(
-		window,
+		handle,
 		sdl.WINDOWPOS_CENTERED,
 		sdl.WINDOWPOS_CENTERED,
 	)
 
-	return window
+	result := new(Window)
+	result.handle = handle
+	result.default_cursor = sdl.CreateSystemCursor(.DEFAULT)
+	result.move_cursor = sdl.CreateSystemCursor(.MOVE)
+	return result
 }

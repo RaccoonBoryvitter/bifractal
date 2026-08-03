@@ -72,6 +72,7 @@ SDL_AppEvent :: proc "c" (
         io.WantCaptureKeyboard,
     )
     fractal_apply_command(&state.fractal, input, state.window.handle)
+    sync_drag_cursor(state)
 
     return .CONTINUE
 }

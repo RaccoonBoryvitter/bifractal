@@ -21,54 +21,76 @@ app_dispatch_events :: proc(state: ^App_Context) {
     for event in state.events.queue {
         switch e in event {
         case View_Reset:
-            reset_fractal_view(
-                &state.fractal.camera.view,
-                &state.fractal.params,
-                &state.fractal.zoom_level,
-            )
+            reset_fractal_view(&state.fractal.base)
         case Max_Iter_Changed:
-            state.fractal.params.max_iter = clamp(
+            state.fractal.base.max_iter = clamp(
                 e.value,
                 FRACTAL_MIN_ITERATIONS,
                 FRACTAL_MAX_ITERATIONS,
             )
         case Window_Resized:
             state.window.size = e.size
-            state.fractal.params.resolution = {f32(e.size.w), f32(e.size.h)}
+            state.fractal.base.resolution = {f32(e.size.w), f32(e.size.h)}
             if resize_gpu_output(&state.gpu, e.size) == nil {
                 state.gpu.valid = false
             }
         case Palette_Banded_Changed:
             state.palette.banded = e.banded
         case Palette_Mirrored:
-            mirror_palette(&state.fractal.params.palette)
+            mirror_palette(&state.fractal.base.palette)
         case Palette_Rotated:
-            rotate_palette(&state.fractal.params.palette, e.delta)
+            rotate_palette(&state.fractal.base.palette, e.delta)
         case Palette_Randomized:
             randomize_palette(
-                &state.fractal.params.palette,
+                &state.fractal.base.palette,
                 rand.default_random_generator(&state.palette.rand_state),
             )
         case Palette_Preset_Applied:
-            apply_palette_preset(&state.fractal.params.palette, e.preset)
+            apply_palette_preset(&state.fractal.base.palette, e.preset)
         case Palette_Color_Changed:
             switch e.kind {
             case .Offset:
-                state.fractal.params.palette.offset = e.value
+                state.fractal.base.palette.offset = e.value
             case .Amplitude:
-                state.fractal.params.palette.amplitude = e.value
+                state.fractal.base.palette.amplitude = e.value
             case .Frequency:
-                state.fractal.params.palette.frequency = e.value
+                state.fractal.base.palette.frequency = e.value
             case .Phase:
-                state.fractal.params.palette.phase = e.value
+                state.fractal.base.palette.phase = e.value
             }
         case Mandelbrot_Power_Changed:
-            state.fractal.params.power = e.value
+            switch d in state.fractal.data {
+            case Mandelbrot_Data:
+                state.fractal.data = Mandelbrot_Data {
+                    power = e.value,
+                }
+            }
         case Interior_Color_Changed:
-            state.fractal.params.interior_color = { e.value.r, e.value.g, e.value.b, 1.0 }
+            state.fractal.base.interior_color = {
+                e.value.r,
+                e.value.g,
+                e.value.b,
+                1.0,
+            }
         }
     }
     clear(&state.events.queue)
+}
+
+sync_drag_cursor :: proc(state: ^App_Context) {
+    target: ^sdl.Cursor
+    if state.fractal.base.camera.is_dragging {
+        target = state.window.move_cursor
+    }
+     else {
+        target = state.window.default_cursor
+    }
+    if target == nil {
+        return
+    }
+    if !sdl.SetCursor(target) {
+        log.errorf("unable to set cursor: %s", sdl.GetError())
+    }
 }
 
 destroy_app :: proc(state: ^App_Context) {
@@ -82,11 +104,11 @@ destroy_app :: proc(state: ^App_Context) {
         im.DestroyContext(state.ui.ctx)
     }
 
-    if state.fractal.move_cursor != nil {
-        sdl.DestroyCursor(state.fractal.move_cursor)
+    if state.window.move_cursor != nil {
+        sdl.DestroyCursor(state.window.move_cursor)
     }
-    if state.fractal.default_cursor != nil {
-        sdl.DestroyCursor(state.fractal.default_cursor)
+    if state.window.default_cursor != nil {
+        sdl.DestroyCursor(state.window.default_cursor)
     }
 
     if state.gpu.output != nil && state.gpu.device != nil {
@@ -133,7 +155,7 @@ init_app :: proc() -> ^App_Context {
     ok := true
     defer if !ok { destroy_app(state) }
 
-    state.window.handle = init_window()
+    state.window = init_window()^
     if state.window.handle == nil {
         ok = false
         return nil
@@ -183,7 +205,7 @@ init_app :: proc() -> ^App_Context {
 
     state.gpu.valid = true
 
-    state.fractal = init_fractal_state(state.window.size)
+    state.fractal = init_fractal_state(.Mandelbrot, state.window.size)
 
     state.palette.rand_state = rand.create_u64(42)
     state.time.last_ticks = sdl.GetTicks()

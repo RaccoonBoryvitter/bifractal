@@ -10,7 +10,10 @@ import sdl "vendor:sdl3"
 
 render_context_begin :: proc(
     state: ^App_Context,
-) -> (ctx: Render_Context, ok: bool) {
+) -> (
+    ctx: Render_Context,
+    ok: bool,
+) {
     ctx.cmd = sdl.AcquireGPUCommandBuffer(state.gpu.device)
     if ctx.cmd == nil {
         log.errorf("unable to acquire GPU command buffer: %s", sdl.GetError())
@@ -26,7 +29,10 @@ render_context_begin :: proc(
 render_context_end :: proc(ctx: ^Render_Context) {
     if ctx.cmd != nil {
         if !sdl.SubmitGPUCommandBuffer(ctx.cmd) {
-            log.errorf("unable to submit GPU command buffer: %s", sdl.GetError())
+            log.errorf(
+                "unable to submit GPU command buffer: %s",
+                sdl.GetError(),
+            )
         }
     }
     mem.arena_free_all(&ctx.scratch)
@@ -47,22 +53,20 @@ render_compute_pass :: proc(state: ^App_Context, ctx: ^Render_Context) {
     )
     sdl.BindGPUComputePipeline(compute_pass, state.gpu.pipeline)
 
-    uniform_size := size_of(Fractal_Uniform)
+    uniform_size := fractal_uniform_size(&state.fractal)
     uniform, alloc_err := mem.arena_alloc(&ctx.scratch, uniform_size)
     if alloc_err != .None {
         sdl.EndGPUComputePass(compute_pass)
         ctx.pass = .None
         return
     }
-    uniform_data := fractal_make_uniform(&state.fractal)
-    mem.copy(uniform, &uniform_data, uniform_size)
+    if !fractal_make_uniform(&state.fractal, uniform) {
+        sdl.EndGPUComputePass(compute_pass)
+        ctx.pass = .None
+        return
+    }
 
-    sdl.PushGPUComputeUniformData(
-        ctx.cmd,
-        0,
-        uniform,
-        u32(uniform_size),
-    )
+    sdl.PushGPUComputeUniformData(ctx.cmd, 0, uniform, u32(uniform_size))
     sdl.DispatchGPUCompute(
         compute_pass,
         (state.window.size.w + 7) / 8,
@@ -77,7 +81,10 @@ render_compute_pass :: proc(state: ^App_Context, ctx: ^Render_Context) {
 render_blit_pass :: proc(
     state: ^App_Context,
     ctx: ^Render_Context,
-) -> (swapchain_texture: ^sdl.GPUTexture, ok: bool) {
+) -> (
+    swapchain_texture: ^sdl.GPUTexture,
+    ok: bool,
+) {
     ctx.pass = .Blit
 
     width, height: u32
@@ -149,12 +156,7 @@ render_ui_pass :: proc(
             load_op  = .LOAD,
             store_op = .STORE,
         }
-        render_pass := sdl.BeginGPURenderPass(
-            ctx.cmd,
-            &target_info,
-            1,
-            nil,
-        )
+        render_pass := sdl.BeginGPURenderPass(ctx.cmd, &target_info, 1, nil)
         im_sdlgpu.RenderDrawData(draw_data, ctx.cmd, render_pass, nil)
 
         sdl.EndGPURenderPass(render_pass)
