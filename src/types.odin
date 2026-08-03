@@ -5,6 +5,7 @@ import "core:math/rand"
 import "core:mem"
 
 import "geom"
+import "palette"
 
 import im "deps:imgui"
 import sdl "vendor:sdl3"
@@ -33,9 +34,20 @@ Gpu_Context :: struct {
     valid:       bool,
 }
 
-Palette :: struct {
-    offset, amplitude, frequency, phase: [4]f32,
-}
+Palette :: palette.Palette
+Palette_Preset         :: palette.Palette_Preset
+Palette_State          :: palette.Palette_State
+Palette_Color_Kind     :: palette.Palette_Color_Kind
+apply_palette_preset   :: palette.apply_palette_preset
+mirror_palette         :: palette.mirror_palette
+rotate_palette         :: palette.rotate_palette
+randomize_palette      :: palette.randomize_palette
+cosine_palette_cpu     :: palette.cosine_palette_cpu
+palette_create_samples :: palette.palette_create_samples
+PALETTE_SWATCH_STEPS          :: palette.PALETTE_SWATCH_STEPS
+PALETTE_PRESET_SWATCH_STEPS   :: palette.PALETTE_PRESET_SWATCH_STEPS
+PALETTE_SWATCH_WIDTH          :: palette.PALETTE_SWATCH_WIDTH
+PALETTE_PRESETS               :: palette.PALETTE_PRESETS
 
 Fractal_View :: struct {
     center: [2]f32,
@@ -85,24 +97,6 @@ Fractal :: struct {
     zoom_level:     f32,
     default_cursor: ^sdl.Cursor,
     move_cursor:    ^sdl.Cursor,
-}
-
-Palette_Preset :: struct {
-    name:          string,
-    using palette: Palette,
-}
-
-Palette_State :: struct {
-    banded:     bool,
-    snapshot:   Maybe(Palette_Preset),
-    rand_state: rand.Default_Random_State,
-}
-
-Palette_Color_Kind :: enum {
-    Offset,
-    Amplitude,
-    Frequency,
-    Phase,
 }
 
 View_Reset :: struct {}
