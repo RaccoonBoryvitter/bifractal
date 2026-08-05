@@ -1,7 +1,9 @@
 package ui
 
+import "base:intrinsics"
 import "base:runtime"
 import "core:fmt"
+import "core:reflect"
 
 import im "deps:imgui"
 
@@ -370,4 +372,52 @@ draw_palette_tab :: proc(view: ^Ui_View) {
             draw_preset_swatch(draw_list, preset)
         }
     }
+}
+
+draw_enum_slider :: proc(
+    label: cstring,
+    value: ^$T,
+) -> (
+    changed: bool,
+) where intrinsics.type_is_enum(T) {
+    values := reflect.enum_field_values(T)
+    n := i32(len(values))
+    if n == 0 do return false
+
+    cursor: i32
+    if reflect.enum_value_has_name(value^) {
+        current := reflect.Type_Info_Enum_Value(value^)
+        for v, i in values {
+            if v == current {
+                cursor = i32(i);
+                break;
+            }
+        }
+    }
+
+    im.PushIDStr(label, nil)
+    defer im.PopID()
+
+    im.Text("%s:", label)
+
+    im.SameLine()
+    if im.ArrowButton("##arrowleft", .Left) {
+        cursor = ((cursor - 1) %n + n) % n
+        value^ = T(values[cursor])
+        changed = true
+    }
+    
+    im.SameLine()
+    name := reflect.enum_name_from_value(value^) or_else "?"
+    // defer delete(name)
+    im.Text("%s", name)
+
+    im.SameLine()
+    if im.ArrowButton("##arrowright", .Right) {
+        cursor = (cursor + 1) % n
+        value^ = T(values[cursor])
+        changed = true
+    }
+
+    return changed
 }

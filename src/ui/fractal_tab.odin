@@ -7,18 +7,10 @@ import "../fractal"
 
 draw_fractal_tab :: proc(view: ^Ui_View) {
     fractal_kind := view.fractal.kind
-    if im.RadioButton("Mandelbrot##kind", fractal_kind == .Mandelbrot) {
+    if draw_enum_slider("Fractal", &fractal_kind) {
         append(
             &view.events.queue,
-            events.Fractal_Kind_Changed{value = .Mandelbrot}
-        )
-    }
-
-    im.SameLine()
-    if im.RadioButton("Julia##kind", fractal_kind == .Julia) {
-        append(
-            &view.events.queue,
-            events.Fractal_Kind_Changed{value = .Julia}
+            events.Fractal_Kind_Changed{value = fractal_kind}
         )
     }
 
