@@ -51,6 +51,9 @@ app_dispatch_events :: proc(state: ^App_Context) {
             )
         case events.Window_Resized:
             state.window.size = e.size
+            state.window.pixel_scale = platform.compute_pixel_scale(
+                state.window.handle,
+            )
             state.fractal.base.resolution = {f32(e.size.w), f32(e.size.h)}
             if platform.resize_gpu_output(&state.gpu, e.size) == nil {
                 state.gpu.valid = false
@@ -160,6 +163,9 @@ init_app :: proc() -> ^App_Context {
         (^i32)(&state.window.size.w),
         (^i32)(&state.window.size.h),
     )
+    state.window.pixel_scale = platform.compute_pixel_scale(
+        state.window.handle,
+    )
 
     state.gpu.device = platform.init_gpu(state.window.handle)
     if state.gpu.device == nil {
@@ -199,6 +205,7 @@ init_app :: proc() -> ^App_Context {
     state.palette.rand_state = rand.create_u64(42)
     state.time.last_ticks = sdl.GetTicks()
 
+    settings.init()
     state.settings, _ = settings.load()
 
     im.CHECKVERSION()

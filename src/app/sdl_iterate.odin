@@ -29,9 +29,11 @@ fps_update :: proc(state: ^App_Context) {
 update_mouse_complex :: proc(state: ^App_Context) {
     mouse_x, mouse_y: f32
     _ = sdl.GetMouseState(&mouse_x, &mouse_y)
-    scale := fractal.get_window_pixel_scale(state.window.handle)
     state.ui.mouse_complex = fractal.view_screen_to_complex(
-        {mouse_x * scale.x, mouse_y * scale.y},
+        {
+            mouse_x * state.window.pixel_scale.x,
+            mouse_y * state.window.pixel_scale.y,
+        },
         state.window.size,
         state.fractal.base.camera.view,
     )
@@ -58,7 +60,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         events        = &state.events,
         settings      = state.settings,
         window_size   = state.window.size,
-        pixel_scale   = fractal.get_window_pixel_scale(state.window.handle),
+        pixel_scale   = state.window.pixel_scale,
         gpu_name      = state.gpu.name,
         gpu_driver    = state.gpu.driver,
         fps           = state.time.current,
@@ -73,13 +75,14 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         ui_view.settings_changed = false
     }
 
-    app_dispatch_events(state)
-
-    if state.settings_dirty {
+    if ui_view.settings_save {
+        ui_view.settings_save = false
         if settings.save(state.settings) {
             state.settings_dirty = false
         }
     }
+
+    app_dispatch_events(state)
 
     render_view := render.Render_View {
         gpu         = &state.gpu,

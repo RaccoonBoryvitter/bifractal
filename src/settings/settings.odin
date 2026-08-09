@@ -46,20 +46,34 @@ Coord_Format :: enum {
 
 SETTINGS_FILE_NAME :: "settings.json"
 
-settings_path :: proc(allocator := context.allocator) -> (string, bool) {
+@(private)
+_cached_path: string
+
+@(private)
+_has_path: bool
+
+init :: proc(allocator := context.allocator) -> bool {
+    if _has_path && _cached_path != "" do return true
+
     base := sdl.GetBasePath()
     if base == nil {
         log.warn(
             "SDL_GetBasePath returned nil; settings will not be persisted",
         )
-        return "", false
+        return false
     }
 
-    dir := strings.clone(string(base), allocator)
+    dir, clone_err := strings.clone_from_cstring(base, allocator)
     sdl.free(rawptr(base))
+    if clone_err != nil {
+        log.errorf("failed to clone base path: %v", clone_err)
+        return false
+    }
     if dir == "" {
-        log.error("failed to clone base path")
-        return "", false
+        log.warn(
+            "SDL_GetBasePath returned an empty path; settings will not be persisted",
+        )
+        return false
     }
 
     full, join_err := filepath.join(
@@ -69,18 +83,20 @@ settings_path :: proc(allocator := context.allocator) -> (string, bool) {
     delete(dir, allocator)
     if join_err != nil {
         log.errorf("failed to join settings path: %v", join_err)
-        return "", false
+        return false
     }
-    return full, true
+
+    _cached_path = full
+    _has_path = true
+    return true
 }
 
 load :: proc(allocator := context.allocator) -> (Settings, bool) {
     defaults := default_settings()
-    path, ok := settings_path(allocator)
-    if !ok {
+    if !init(allocator) {
         return defaults, false
     }
-    defer delete(path, allocator)
+    path := _cached_path
 
     data, read_err := os.read_entire_file_from_path(path, allocator)
     if read_err != nil {
@@ -103,11 +119,10 @@ load :: proc(allocator := context.allocator) -> (Settings, bool) {
 }
 
 save :: proc(s: Settings, allocator := context.allocator) -> bool {
-    path, ok := settings_path(allocator)
-    if !ok {
+    if !init(allocator) {
         return false
     }
-    defer delete(path, allocator)
+    path := _cached_path
 
     if dir := filepath.dir(path); dir != "" {
         if err := os.make_directory_all(dir); err != nil {

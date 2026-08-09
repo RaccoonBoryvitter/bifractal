@@ -27,6 +27,7 @@ Ui_View :: struct {
     events:           ^events.App_Events,
     settings:         settings.Settings,
     settings_changed: bool,
+    settings_save:    bool,
     window_size:      geom.Extent_2D,
     pixel_scale:      geom.Vec2,
     gpu_name:         string,

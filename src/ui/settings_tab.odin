@@ -39,8 +39,7 @@ draw_settings_tab :: proc(view: ^Ui_View) {
             im.EndCombo()
         }
 
-        im.Separator()
-        im.Text("Fields")
+        im.SeparatorText("Fields")
         if im.Checkbox("FPS", &s.hud.show_fps) do view.settings_changed = true
         if im.Checkbox("Frame time", &s.hud.show_frame_ms) do view.settings_changed = true
         if im.Checkbox("Fractal", &s.hud.show_fractal_kind) do view.settings_changed = true
@@ -52,8 +51,7 @@ draw_settings_tab :: proc(view: ^Ui_View) {
         if im.Checkbox("Resolution", &s.hud.show_resolution) do view.settings_changed = true
         if im.Checkbox("Palette name", &s.hud.show_palette) do view.settings_changed = true
 
-        im.Separator()
-        im.Text("Coordinate format")
+        im.SeparatorText("Coordinate format")
         cf := s.hud.coord_format
         for f in settings.Coord_Format {
             selected := f == cf
@@ -73,5 +71,6 @@ draw_settings_tab :: proc(view: ^Ui_View) {
     im.SameLine()
     if im.Button("Save") {
         view.settings_changed = true
+        view.settings_save = true
     }
 }
