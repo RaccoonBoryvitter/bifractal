@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Linux (x86_64)
+    name: Build
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,8 @@ jobs:
             libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
             libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
             libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev \
-            clang python3
+            clang python3 \
+            libc++-dev libc++abi-dev
           curl -fsSL -o sdl.tar.gz \
             "https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.sdl_version }}/SDL3-${{ inputs.sdl_version }}.tar.gz"
           tar -xzf sdl.tar.gz
@@ -63,12 +64,7 @@ jobs:
         run: strip build/bifractal
 
       - name: Package
-        run: |
-          mkdir -p dist/bifractal-linux-x86_64
-          cp build/bifractal dist/bifractal-linux-x86_64/
-          chmod +x dist/bifractal-linux-x86_64/bifractal
-          (cd dist && zip -r ../bifractal-linux-x86_64.zip bifractal-linux-x86_64)
-          rm -rf dist
+        run: zip -j bifractal-linux-x86_64.zip build/bifractal
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

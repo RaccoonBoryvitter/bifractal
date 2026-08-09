@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: macOS (arm64)
+    name: Build
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -51,12 +51,7 @@ jobs:
           ./scripts/unix/build.sh
 
       - name: Package
-        run: |
-          mkdir -p dist/bifractal-macos-arm64
-          cp build/bifractal dist/bifractal-macos-arm64/
-          chmod +x dist/bifractal-macos-arm64/bifractal
-          (cd dist && zip -r ../bifractal-macos-arm64.zip bifractal-macos-arm64)
-          rm -rf dist
+        run: zip -j bifractal-macos-arm64.zip build/bifractal
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

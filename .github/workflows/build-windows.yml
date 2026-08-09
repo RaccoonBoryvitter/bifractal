@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Windows (x86_64)
+    name: Build
     runs-on: windows-2022
     defaults:
       run:
@@ -37,12 +37,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $odinRoot = & odin root
-          $stage = "dist/bifractal-windows-x86_64"
-          New-Item -ItemType Directory -Path $stage -Force | Out-Null
-          Copy-Item build/bifractal.exe $stage/
-          Copy-Item "$odinRoot/vendor/sdl3/SDL3.dll" $stage/
-          Compress-Archive -Path $stage -DestinationPath bifractal-windows-x86_64.zip
-          Remove-Item -Recurse -Force dist
+          Compress-Archive -Path build/bifractal.exe, "$odinRoot/vendor/sdl3/SDL3.dll" -DestinationPath bifractal-windows-x86_64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
