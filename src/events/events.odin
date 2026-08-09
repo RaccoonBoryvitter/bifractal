@@ -53,6 +53,8 @@ Julia_Constant_Changed :: struct {
 
 Settings_Reset :: struct {}
 
+Image_Save_Requested :: struct {}
+
 App_Event :: union {
     View_Reset,
     Max_Iter_Changed,
@@ -68,6 +70,7 @@ App_Event :: union {
     Mandelbrot_Power_Changed,
     Julia_Constant_Changed,
     Settings_Reset,
+    Image_Save_Requested,
 }
 
 App_Events :: struct {

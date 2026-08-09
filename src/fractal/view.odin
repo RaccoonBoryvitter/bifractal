@@ -15,7 +15,7 @@ view_screen_to_complex :: proc(
     h := f32(size.h)
     return complex(
         (screen.x - w * 0.5) / (h * view.zoom) + view.center.x,
-        (screen.y - h * 0.5) / (h * view.zoom) + view.center.y,
+        -(screen.y - h * 0.5) / (h * view.zoom) + view.center.y,
     )
 }
 

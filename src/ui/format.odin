@@ -1,6 +1,7 @@
 package ui
 
 import "core:fmt"
+import "core:math"
 
 import "../fractal"
 import "../palette"
@@ -13,6 +14,8 @@ format_zoom :: proc(zoom: f32) -> string {
     return fmt.tprintf("%.4f", zoom)
 }
 
+FRACTION_MAX_WIDTH :: 30
+
 format_coord :: proc(v: [2]f32, format: settings.Coord_Format) -> string {
     switch format {
     case .Decimal:
@@ -20,9 +23,97 @@ format_coord :: proc(v: [2]f32, format: settings.Coord_Format) -> string {
     case .Scientific:
         return fmt.tprintf("%+.4e %+.4ei", v.x, v.y)
     case .Fraction:
-        return fmt.tprintf("%+.6f %+.6fi", v.x, v.y)
+        fraction := fmt.tprintf(
+            "%s %si",
+            format_fraction(v.x),
+            format_fraction(v.y),
+        )
+
+        fraction_len := len(fraction)
+        if fraction_len > FRACTION_MAX_WIDTH {
+            return fraction
+        }
+
+        return fmt.tprintf(
+            "%s%*s",
+            fraction,
+            FRACTION_MAX_WIDTH - fraction_len,
+            " ",
+        )
     }
     return ""
+}
+
+@(private = "file")
+format_fraction :: proc(v: f32) -> string {
+    if math.is_nan(v) || math.is_inf(v) {
+        return fmt.tprintf("%g", v)
+    }
+
+    if math.abs(v) >= 1.0e6 || (v != 0 && math.abs(v) < 1.0e-4) {
+        return fmt.tprintf("%.4e", v)
+    }
+
+    num, den, ok := continued_fraction(v)
+    if !ok {
+        return fmt.tprintf("%.6f", v)
+    }
+
+    approx := f32(num) / f32(den)
+    if math.abs(v - approx) > 1.0e-5 * max(1.0, math.abs(v)) {
+        return fmt.tprintf("%.6f", v)
+    }
+
+    if den == 1 {
+        return fmt.tprintf("%d", num)
+    }
+    return fmt.tprintf("%d/%d", num, den)
+}
+
+@(private = "file")
+continued_fraction :: proc(v: f32) -> (num, den: int, ok: bool) {
+    if math.is_nan(v) || math.is_inf(v) {
+        return 0, 0, false
+    }
+    if v == 0 {
+        return 0, 1, true
+    }
+
+    negative := v < 0
+    x := math.abs(v)
+
+    pnum, pden := 0, 1
+    num, den = 1, 0
+
+    max_val := 1_000_000
+    max_iter := 20
+
+    for _ in 0 ..< max_iter {
+        a := int(math.floor(x))
+        if f32(a) > x - 1.0e-9 && f32(a) < x + 1.0e-9 {
+            x = f32(a)
+        }
+        x = x - f32(a)
+
+        new_num := a * num + pnum
+        new_den := a * den + pden
+        if new_den == 0 || new_den > max_val || new_num > max_val {
+            break
+        }
+
+        pnum, pden = num, den
+        num, den = new_num, new_den
+
+        if x < 1.0e-9 {
+            break
+        }
+        x = 1.0 / x
+    }
+
+    if negative {
+        num = -num
+    }
+    return num, den, true
 }
 
 fractal_kind_name :: proc(f: ^fractal.Fractal) -> string {

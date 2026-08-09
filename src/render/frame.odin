@@ -27,7 +27,7 @@ render_context_begin :: proc(
 ) {
     ctx.cmd = sdl.AcquireGPUCommandBuffer(view.gpu.device)
     if ctx.cmd == nil {
-        log.errorf("unable to acquire GPU command buffer: %s", sdl.GetError())
+        log.warnf("unable to acquire GPU command buffer: %s", sdl.GetError())
         return ctx, false
     }
 

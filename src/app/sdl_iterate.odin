@@ -13,6 +13,8 @@ import "../render"
 import "../settings"
 import "../ui"
 
+TOAST_DURATION_MS :: 3000
+
 fps_update :: proc(state: ^App_Context) {
     state.time.frame_count += 1
     now := sdl.GetTicks()
@@ -39,6 +41,18 @@ update_mouse_complex :: proc(state: ^App_Context) {
     )
 }
 
+maybe_save_image :: proc(state: ^App_Context) {
+    if !state.pending_save_image do return
+    state.pending_save_image = false
+
+    path, ok := render.save_output_to_png(&state.gpu, state.window.size)
+    if ok {
+        delete(state.save_toast)
+        state.save_toast = path
+        state.save_toast_ticks = sdl.GetTicks()
+    }
+}
+
 SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     context = runtime.default_context()
     defer free_all(context.temp_allocator)
@@ -53,12 +67,20 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     im_sdlgpu.NewFrame()
     im.NewFrame()
 
+    toast_str := state.save_toast
+    if toast_str != "" &&
+       sdl.GetTicks() - state.save_toast_ticks > TOAST_DURATION_MS {
+        delete(state.save_toast)
+        state.save_toast = ""
+    }
+
     ui_view := ui.Ui_View {
         ui_state      = &state.ui,
         fractal       = &state.fractal,
         palette_state = &state.palette,
         events        = &state.events,
         settings      = state.settings,
+        toast         = state.save_toast,
         window_size   = state.window.size,
         pixel_scale   = state.window.pixel_scale,
         gpu_name      = state.gpu.name,
@@ -68,6 +90,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     }
     ui.create_imgui_ui(&ui_view)
     ui.draw_hud(&ui_view)
+    ui.draw_toast(&ui_view)
 
     if ui_view.settings_changed {
         state.settings = ui_view.settings
@@ -91,5 +114,9 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         window      = state.window.handle,
         window_size = state.window.size,
     }
-    return render.render_present_frame(&render_view)
+    result := render.render_present_frame(&render_view)
+
+    maybe_save_image(state)
+
+    return result
 }

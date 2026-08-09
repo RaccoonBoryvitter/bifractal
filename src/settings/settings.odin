@@ -64,7 +64,6 @@ init :: proc(allocator := context.allocator) -> bool {
     }
 
     dir, clone_err := strings.clone_from_cstring(base, allocator)
-    sdl.free(rawptr(base))
     if clone_err != nil {
         log.errorf("failed to clone base path: %v", clone_err)
         return false

@@ -40,4 +40,8 @@ draw_view_tab :: proc(view: ^Ui_View) {
     if im.Button("Reset View") {
         append(&view.events.queue, events.View_Reset{})
     }
+    im.SameLine()
+    if im.Button("Save Image (Ctrl+S)") {
+        append(&view.events.queue, events.Image_Save_Requested{})
+    }
 }

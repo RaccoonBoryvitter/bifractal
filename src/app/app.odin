@@ -18,16 +18,19 @@ import "../settings"
 import "../ui"
 
 App_Context :: struct {
-    window:         platform.Window,
-    logger:         log.Logger,
-    gpu:            platform.Gpu_Context,
-    fractal:        fractal.Fractal,
-    palette:        palette.Palette_State,
-    ui:             ui.Ui_State,
-    time:           Time,
-    events:         events.App_Events,
-    settings:       settings.Settings,
-    settings_dirty: bool,
+    window:             platform.Window,
+    logger:             log.Logger,
+    gpu:                platform.Gpu_Context,
+    fractal:            fractal.Fractal,
+    palette:            palette.Palette_State,
+    ui:                 ui.Ui_State,
+    time:               Time,
+    events:             events.App_Events,
+    settings:           settings.Settings,
+    settings_dirty:     bool,
+    pending_save_image: bool,
+    save_toast:         string,
+    save_toast_ticks:   u64,
 }
 
 create_app_logger :: proc() -> log.Logger {
@@ -114,6 +117,8 @@ app_dispatch_events :: proc(state: ^App_Context) {
         case events.Settings_Reset:
             state.settings = settings.default_settings()
             state.settings_dirty = true
+        case events.Image_Save_Requested:
+            state.pending_save_image = true
         }
     }
     clear(&state.events.queue)

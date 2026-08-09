@@ -28,6 +28,14 @@ SDL_AppEvent :: proc "c" (
         return .CONTINUE
     }
 
+    if event.type == .KEY_DOWN && event.key.key == sdl.K_S {
+        mod := sdl.GetModState()
+        if .LCTRL in mod || .RCTRL in mod {
+            append(&state.events.queue, events.Image_Save_Requested{})
+            return .CONTINUE
+        }
+    }
+
     if event.type == .QUIT || event.type == .WINDOW_CLOSE_REQUESTED {
         return .SUCCESS
     }
