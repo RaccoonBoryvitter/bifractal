@@ -13,8 +13,6 @@ import "../render"
 import "../settings"
 import "../ui"
 
-TOAST_DURATION_MS :: 3000
-
 fps_update :: proc(state: ^App_Context) {
     state.time.frame_count += 1
     now := sdl.GetTicks()
@@ -41,18 +39,6 @@ update_mouse_complex :: proc(state: ^App_Context) {
     )
 }
 
-maybe_save_image :: proc(state: ^App_Context) {
-    if !state.pending_save_image do return
-    state.pending_save_image = false
-
-    path, ok := render.save_output_to_png(&state.gpu, state.window.size)
-    if ok {
-        delete(state.save_toast)
-        state.save_toast = path
-        state.save_toast_ticks = sdl.GetTicks()
-    }
-}
-
 SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     context = runtime.default_context()
     defer free_all(context.temp_allocator)
@@ -67,20 +53,15 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     im_sdlgpu.NewFrame()
     im.NewFrame()
 
-    toast_str := state.save_toast
-    if toast_str != "" &&
-       sdl.GetTicks() - state.save_toast_ticks > TOAST_DURATION_MS {
-        delete(state.save_toast)
-        state.save_toast = ""
-    }
+    _ = render.tick_toast(&state.save, sdl.GetTicks())
 
     ui_view := ui.Ui_View {
         ui_state      = &state.ui,
         fractal       = &state.fractal,
         palette_state = &state.palette,
         events        = &state.events,
-        settings      = state.settings,
-        toast         = state.save_toast,
+        settings      = state.settings.settings,
+        toast         = render.get_toast(&state.save),
         window_size   = state.window.size,
         pixel_scale   = state.window.pixel_scale,
         gpu_name      = state.gpu.name,
@@ -93,16 +74,14 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     ui.draw_toast(&ui_view)
 
     if ui_view.settings_changed {
-        state.settings = ui_view.settings
-        state.settings_dirty = true
+        state.settings.settings = ui_view.settings
+        state.settings.dirty = true
         ui_view.settings_changed = false
     }
 
     if ui_view.settings_save {
         ui_view.settings_save = false
-        if settings.save(state.settings) {
-            state.settings_dirty = false
-        }
+        _ = settings.save(&state.settings)
     }
 
     app_dispatch_events(state)
@@ -116,7 +95,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     }
     result := render.render_present_frame(&render_view)
 
-    maybe_save_image(state)
+    _ = render.process_save(&state.save, &state.gpu, state.window.size)
 
     return result
 }

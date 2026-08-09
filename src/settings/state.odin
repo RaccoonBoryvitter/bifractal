@@ -7,6 +7,11 @@ import "core:path/filepath"
 import "core:strings"
 import sdl "vendor:sdl3"
 
+Settings_State :: struct {
+    settings: Settings,
+    dirty:    bool,
+}
+
 Settings :: struct {
     hud: Hud_Settings,
 }
@@ -52,6 +57,11 @@ _cached_path: string
 @(private)
 _has_path: bool
 
+reset :: proc(state: ^Settings_State) {
+    state.settings = default_settings()
+    state.dirty = true
+}
+
 init :: proc(allocator := context.allocator) -> bool {
     if _has_path && _cached_path != "" do return true
 
@@ -90,10 +100,12 @@ init :: proc(allocator := context.allocator) -> bool {
     return true
 }
 
-load :: proc(allocator := context.allocator) -> (Settings, bool) {
-    defaults := default_settings()
+load :: proc(allocator := context.allocator) -> (Settings_State, bool) {
+    state := Settings_State {
+        settings = default_settings(),
+    }
     if !init(allocator) {
-        return defaults, false
+        return state, false
     }
     path := _cached_path
 
@@ -104,21 +116,22 @@ load :: proc(allocator := context.allocator) -> (Settings, bool) {
             path,
             read_err,
         )
-        return defaults, false
+        return state, false
     }
     defer delete(data, allocator)
 
-    if err := json.unmarshal(data, &defaults); err != nil {
+    if err := json.unmarshal(data, &state.settings); err != nil {
         log.warnf("failed to parse %s (%v); using defaults", path, err)
-        return default_settings(), false
+        return Settings_State{settings = default_settings()}, false
     }
+    state.dirty = false
 
     log.infof("loaded settings from %s", path)
-    return defaults, true
+    return state, true
 }
 
-save :: proc(s: Settings, allocator := context.allocator) -> bool {
-    if !init(allocator) {
+save :: proc(state: ^Settings_State) -> bool {
+    if !init() {
         return false
     }
     path := _cached_path
@@ -136,17 +149,18 @@ save :: proc(s: Settings, allocator := context.allocator) -> bool {
         spaces         = 4,
         use_enum_names = true,
     }
-    data, err := json.marshal(s, opt, allocator)
+    data, err := json.marshal(state.settings, opt, context.allocator)
     if err != nil {
         log.errorf("failed to marshal settings: %v", err)
         return false
     }
-    defer delete(data, allocator)
+    defer delete(data, context.allocator)
 
     if write_err := os.write_entire_file_from_bytes(path, data);
        write_err != nil {
         log.errorf("failed to write settings to %s: %v", path, write_err)
         return false
     }
+    state.dirty = false
     return true
 }

@@ -14,23 +14,21 @@ import "../fractal"
 import "../geom"
 import "../palette"
 import "../platform"
+import "../render"
 import "../settings"
 import "../ui"
 
 App_Context :: struct {
-    window:             platform.Window,
-    logger:             log.Logger,
-    gpu:                platform.Gpu_Context,
-    fractal:            fractal.Fractal,
-    palette:            palette.Palette_State,
-    ui:                 ui.Ui_State,
-    time:               Time,
-    events:             events.App_Events,
-    settings:           settings.Settings,
-    settings_dirty:     bool,
-    pending_save_image: bool,
-    save_toast:         string,
-    save_toast_ticks:   u64,
+    window:   platform.Window,
+    logger:   log.Logger,
+    gpu:      platform.Gpu_Context,
+    fractal:  fractal.Fractal,
+    palette:  palette.Palette_State,
+    ui:       ui.Ui_State,
+    time:     Time,
+    events:   events.App_Events,
+    settings: settings.Settings_State,
+    save:     render.Save_State,
 }
 
 create_app_logger :: proc() -> log.Logger {
@@ -115,10 +113,9 @@ app_dispatch_events :: proc(state: ^App_Context) {
                 }
             }
         case events.Settings_Reset:
-            state.settings = settings.default_settings()
-            state.settings_dirty = true
+            settings.reset(&state.settings)
         case events.Image_Save_Requested:
-            state.pending_save_image = true
+            render.request_save(&state.save)
         }
     }
     clear(&state.events.queue)
@@ -293,9 +290,11 @@ destroy_app :: proc(state: ^App_Context) {
     delete(state.gpu.driver)
     delete(state.events.queue)
 
-    if state.settings_dirty {
-        settings.save(state.settings)
+    if state.settings.dirty {
+        settings.save(&state.settings)
     }
+
+    render.destroy(&state.save)
 
     if state.logger.procedure != nil {
         log.destroy_console_logger(state.logger)
