@@ -2,7 +2,7 @@
 
 Build-Project
 
-$exe = Join-Path (Get-RepoRoot) 'build/odinzoom.exe'
+$exe = Join-Path (Get-RepoRoot) 'build/bifractal.exe'
 if (-not (Test-Path -Path $exe)) {
     throw "Executable not found: $exe"
 }

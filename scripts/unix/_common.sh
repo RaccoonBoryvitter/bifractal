@@ -20,7 +20,7 @@ build_project() {
 
     mkdir -p "$repo_root/build"
 
-    odin build "$repo_root/src" -out:"$repo_root/build/odinzoom" -collection:deps="$repo_root/deps"
+    odin build "$repo_root/src" -out:"$repo_root/build/bifractal" -collection:deps="$repo_root/deps"
 }
 
 # SDL3 is linked as 'system:SDL3' on Linux/macOS, so it must be installed globally.

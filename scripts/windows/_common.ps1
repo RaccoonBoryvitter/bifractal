@@ -22,7 +22,7 @@ function Build-Project {
     }
 
     $odin = Find-Odin
-    & $odin build "$repoRoot/src" -out:"$buildDir/odinzoom.exe" -collection:deps="$repoRoot/deps"
+    & $odin build "$repoRoot/src" -out:"$buildDir/bifractal.exe" -collection:deps="$repoRoot/deps"
     if ($LASTEXITCODE -ne 0) {
         throw "Odin build failed with exit code $LASTEXITCODE"
     }

@@ -4,7 +4,7 @@ import "../geom"
 import "core:log"
 import sdl "vendor:sdl3"
 
-WINDOW_TITLE :: "Odin Zoom"
+WINDOW_TITLE :: "Bifractal"
 WINDOW_RESOLUTION :: geom.Extent_2D {
     w = 1280,
     h = 720,
@@ -19,6 +19,7 @@ Window :: struct {
 }
 
 init_window :: proc() -> ^Window {
+    apply_app_metadata()
     ok := sdl.Init({.VIDEO, .EVENTS})
     if !ok {
         log.errorf("unable to initialize SDL: %s", sdl.GetError())
