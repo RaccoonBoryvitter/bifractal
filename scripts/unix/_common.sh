@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root() {
-    echo "$(cd "$SCRIPT_DIR/.." && pwd)"
+    echo "$(cd "$SCRIPT_DIR/../.." && pwd)"
 }
 
 find_odin() {
