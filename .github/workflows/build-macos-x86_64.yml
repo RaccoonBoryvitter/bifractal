@@ -1,0 +1,67 @@
+name: build-macos-x86_64
+
+on:
+  workflow_call:
+    inputs:
+      odin_version:
+        required: true
+        type: string
+      sdl_version:
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: macOS (x86_64)
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Odin (${{ inputs.odin_version }})
+        run: |
+          set -euo pipefail
+          curl -fsSL -o odin.tar.gz \
+            "https://github.com/odin-lang/Odin/releases/download/${{ inputs.odin_version }}/odin-macos-amd64-${{ inputs.odin_version }}.tar.gz"
+          sudo mkdir -p /opt/odin
+          sudo tar -xzf odin.tar.gz --strip-components=1 -C /opt/odin
+          sudo ln -sf /opt/odin/odin /usr/local/bin/odin
+          odin version
+
+      - name: Install SDL3 ${{ inputs.sdl_version }} (source build)
+        run: |
+          set -euo pipefail
+          brew install cmake pkg-config
+          curl -fsSL -o sdl.tar.gz \
+            "https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.sdl_version }}/SDL3-${{ inputs.sdl_version }}.tar.gz"
+          tar -xzf sdl.tar.gz
+          cmake -S "SDL3-${{ inputs.sdl_version }}" -B sdl-build \
+            -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF
+          cmake --build sdl-build -j"$(sysctl -n hw.ncpu)"
+          sudo cmake --install sdl-build
+          rm -rf "SDL3-${{ inputs.sdl_version }}" sdl.tar.gz sdl-build
+          pkg-config sdl3 --modversion
+
+      - name: Build imgui static library
+        working-directory: deps/imgui
+        run: python3 build.py
+
+      - name: Build
+        run: |
+          chmod +x scripts/unix/build.sh scripts/unix/_common.sh
+          ./scripts/unix/build.sh
+
+      - name: Package
+        run: |
+          mkdir -p dist/bifractal-macos-x86_64
+          cp build/bifractal dist/bifractal-macos-x86_64/
+          chmod +x dist/bifractal-macos-x86_64/bifractal
+          (cd dist && zip -r ../bifractal-macos-x86_64.zip bifractal-macos-x86_64)
+          rm -rf dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bifractal-macos-x86_64
+          path: bifractal-macos-x86_64.zip
+          if-no-files-found: error
+          retention-days: 14
