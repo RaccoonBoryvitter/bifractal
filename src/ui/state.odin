@@ -6,6 +6,7 @@ import "../events"
 import "../fractal"
 import "../geom"
 import "../palette"
+import "../settings"
 
 Channel :: enum {
     Red,
@@ -20,14 +21,16 @@ Ui_State :: struct {
 }
 
 Ui_View :: struct {
-    ui_state:      ^Ui_State,
-    fractal:       ^fractal.Fractal,
-    palette_state: ^palette.Palette_State,
-    events:        ^events.App_Events,
-    window_size:   geom.Extent_2D,
-    pixel_scale:   geom.Vec2,
-    gpu_name:      string,
-    gpu_driver:    string,
-    fps:           f32,
-    frame_time_ms: f32,
+    ui_state:         ^Ui_State,
+    fractal:          ^fractal.Fractal,
+    palette_state:    ^palette.Palette_State,
+    events:           ^events.App_Events,
+    settings:         settings.Settings,
+    settings_changed: bool,
+    window_size:      geom.Extent_2D,
+    pixel_scale:      geom.Vec2,
+    gpu_name:         string,
+    gpu_driver:       string,
+    fps:              f32,
+    frame_time_ms:    f32,
 }

@@ -10,6 +10,7 @@ import im_sdlgpu "deps:imgui/imgui_impl_sdlgpu3"
 
 import "../fractal"
 import "../render"
+import "../settings"
 import "../ui"
 
 fps_update :: proc(state: ^App_Context) {
@@ -25,6 +26,17 @@ fps_update :: proc(state: ^App_Context) {
     }
 }
 
+update_mouse_complex :: proc(state: ^App_Context) {
+    mouse_x, mouse_y: f32
+    _ = sdl.GetMouseState(&mouse_x, &mouse_y)
+    scale := fractal.get_window_pixel_scale(state.window.handle)
+    state.ui.mouse_complex = fractal.view_screen_to_complex(
+        {mouse_x * scale.x, mouse_y * scale.y},
+        state.window.size,
+        state.fractal.base.camera.view,
+    )
+}
+
 SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     context = runtime.default_context()
     defer free_all(context.temp_allocator)
@@ -33,6 +45,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
     context.logger = state.logger
 
     fps_update(state)
+    update_mouse_complex(state)
 
     im_sdl.NewFrame()
     im_sdlgpu.NewFrame()
@@ -43,6 +56,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         fractal       = &state.fractal,
         palette_state = &state.palette,
         events        = &state.events,
+        settings      = state.settings,
         window_size   = state.window.size,
         pixel_scale   = fractal.get_window_pixel_scale(state.window.handle),
         gpu_name      = state.gpu.name,
@@ -51,8 +65,21 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         frame_time_ms = 1000.0 / max(state.time.current, 0.001),
     }
     ui.create_imgui_ui(&ui_view)
+    ui.draw_hud(&ui_view)
+
+    if ui_view.settings_changed {
+        state.settings = ui_view.settings
+        state.settings_dirty = true
+        ui_view.settings_changed = false
+    }
 
     app_dispatch_events(state)
+
+    if state.settings_dirty {
+        if settings.save(state.settings) {
+            state.settings_dirty = false
+        }
+    }
 
     render_view := render.Render_View {
         gpu         = &state.gpu,

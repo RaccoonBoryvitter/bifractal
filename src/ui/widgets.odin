@@ -11,13 +11,6 @@ import "../events"
 import "../fractal"
 import "../palette"
 
-format_zoom :: proc(zoom: f32) -> string {
-    if zoom > 1_000_000 || zoom < 0.000_001 {
-        return fmt.tprintf("%e", zoom)
-    }
-    return fmt.tprintf("%.4f", zoom)
-}
-
 @(private = "file")
 draw_gradient_swatch :: proc(
     draw_list: ^im.DrawList,
@@ -389,8 +382,8 @@ draw_enum_slider :: proc(
         current := reflect.Type_Info_Enum_Value(value^)
         for v, i in values {
             if v == current {
-                cursor = i32(i);
-                break;
+                cursor = i32(i)
+                break
             }
         }
     }
@@ -402,14 +395,13 @@ draw_enum_slider :: proc(
 
     im.SameLine()
     if im.ArrowButton("##arrowleft", .Left) {
-        cursor = ((cursor - 1) %n + n) % n
+        cursor = ((cursor - 1) % n + n) % n
         value^ = T(values[cursor])
         changed = true
     }
-    
+
     im.SameLine()
     name := reflect.enum_name_from_value(value^) or_else "?"
-    // defer delete(name)
     im.Text("%s", name)
 
     im.SameLine()

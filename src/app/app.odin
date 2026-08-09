@@ -14,17 +14,20 @@ import "../fractal"
 import "../geom"
 import "../palette"
 import "../platform"
+import "../settings"
 import "../ui"
 
 App_Context :: struct {
-    window:  platform.Window,
-    logger:  log.Logger,
-    gpu:     platform.Gpu_Context,
-    fractal: fractal.Fractal,
-    palette: palette.Palette_State,
-    ui:      ui.Ui_State,
-    time:    Time,
-    events:  events.App_Events,
+    window:         platform.Window,
+    logger:         log.Logger,
+    gpu:            platform.Gpu_Context,
+    fractal:        fractal.Fractal,
+    palette:        palette.Palette_State,
+    ui:             ui.Ui_State,
+    time:           Time,
+    events:         events.App_Events,
+    settings:       settings.Settings,
+    settings_dirty: bool,
 }
 
 create_app_logger :: proc() -> log.Logger {
@@ -84,10 +87,13 @@ app_dispatch_events :: proc(state: ^App_Context) {
                 1.0,
             }
         case events.Fractal_Kind_Changed:
-            state.fractal = fractal.init_fractal_state(e.value, geom.Extent_2D {
-                w = u32(state.fractal.base.resolution.x),
-                h = u32(state.fractal.base.resolution.y),
-            })
+            state.fractal = fractal.init_fractal_state(
+                e.value,
+                geom.Extent_2D {
+                    w = u32(state.fractal.base.resolution.x),
+                    h = u32(state.fractal.base.resolution.y),
+                },
+            )
         case events.Mandelbrot_Power_Changed:
             #partial switch d in state.fractal.data {
             case fractal.Mandelbrot_Data:
@@ -95,13 +101,16 @@ app_dispatch_events :: proc(state: ^App_Context) {
                     power = e.value,
                 }
             }
-		case events.Julia_Constant_Changed:
-			#partial switch d in state.fractal.data {
+        case events.Julia_Constant_Changed:
+            #partial switch d in state.fractal.data {
             case fractal.Julia_Data:
                 state.fractal.data = fractal.Julia_Data {
                     constant = e.value,
                 }
             }
+        case events.Settings_Reset:
+            state.settings = settings.default_settings()
+            state.settings_dirty = true
         }
     }
     clear(&state.events.queue)
@@ -172,7 +181,7 @@ init_app :: proc() -> ^App_Context {
         string(sdl.GetGPUDeviceDriver(state.gpu.device)),
     )
 
-	state.gpu.pipelines = platform.create_compute_pipelines(state.gpu.device)
+    state.gpu.pipelines = platform.create_compute_pipelines(state.gpu.device)
     if state.gpu.pipelines == nil || len(state.gpu.pipelines) == 0 {
         ok = false
         return nil
@@ -189,6 +198,8 @@ init_app :: proc() -> ^App_Context {
 
     state.palette.rand_state = rand.create_u64(42)
     state.time.last_ticks = sdl.GetTicks()
+
+    state.settings, _ = settings.load()
 
     im.CHECKVERSION()
     state.ui.ctx = im.CreateContext()
@@ -251,9 +262,9 @@ destroy_app :: proc(state: ^App_Context) {
         sdl.ReleaseGPUTexture(state.gpu.device, state.gpu.output)
     }
     if state.gpu.pipelines != nil && state.gpu.device != nil {
-		for _, pipeline in state.gpu.pipelines {
-			sdl.ReleaseGPUComputePipeline(state.gpu.device, pipeline)
-		}
+        for _, pipeline in state.gpu.pipelines {
+            sdl.ReleaseGPUComputePipeline(state.gpu.device, pipeline)
+        }
     }
 
     if state.gpu.device != nil {
@@ -269,6 +280,10 @@ destroy_app :: proc(state: ^App_Context) {
     delete(state.gpu.name)
     delete(state.gpu.driver)
     delete(state.events.queue)
+
+    if state.settings_dirty {
+        settings.save(state.settings)
+    }
 
     if state.logger.procedure != nil {
         log.destroy_console_logger(state.logger)

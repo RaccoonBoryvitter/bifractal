@@ -34,6 +34,11 @@ create_imgui_ui :: proc(view: ^Ui_View) {
             im.EndTabItem()
         }
 
+        if im.BeginTabItem("Settings") {
+            draw_settings_tab(view)
+            im.EndTabItem()
+        }
+
         im.EndTabBar()
     }
 }
