@@ -37,4 +37,8 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
     if fractal_kind == .Burning_Ship {
         draw_burning_ship_tab(view)
     }
+
+    if fractal_kind == .Tricorn {
+        draw_tricorn_tab(view)
+    }
 }

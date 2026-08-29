@@ -65,6 +65,12 @@ create_compute_pipelines :: proc(
         fractal.BURNING_SHIP_SHADER_ENTRY,
         SHADER_FORMAT,
     )
+    pipes[.Tricorn] = create_compute_pipeline(
+        device,
+        fractal.TRICORN_SHADER,
+        fractal.TRICORN_SHADER_ENTRY,
+        SHADER_FORMAT,
+    )
     return pipes
 }
 
