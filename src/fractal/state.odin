@@ -61,6 +61,12 @@ init_fractal_state :: proc(
             base = base,
             data = Celtic_Data{power = 2.0},
         }
+    case .Buffalo:
+        return Fractal {
+            kind = .Buffalo,
+            base = base,
+            data = Buffalo_Data{power = 2.0},
+        }
     }
     return Fractal{}
 }
@@ -80,6 +86,9 @@ fractal_uniform_size :: proc(fractal: ^Fractal) -> int {
     }
     if _, ok := &fractal.data.(Celtic_Data); ok {
         return size_of(Celtic_Uniform)
+    }
+    if _, ok := &fractal.data.(Buffalo_Data); ok {
+        return size_of(Buffalo_Uniform)
     }
     return 0
 }
@@ -103,6 +112,10 @@ fractal_make_uniform :: proc(fractal: ^Fractal, dst: rawptr) -> bool {
     }
     if d, ok := &fractal.data.(Celtic_Data); ok {
         _, ok2 := celtic_make_uniform(&fractal.base, d, dst)
+        return ok2
+    }
+    if d, ok := &fractal.data.(Buffalo_Data); ok {
+        _, ok2 := buffalo_make_uniform(&fractal.base, d, dst)
         return ok2
     }
     return false

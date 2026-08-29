@@ -9,6 +9,7 @@ Fractal_Kind :: enum {
     Burning_Ship,
     Tricorn,
     Celtic,
+    Buffalo,
 }
 
 Fractal_View :: struct {
@@ -68,12 +69,17 @@ Celtic_Data :: struct {
     power: f32,
 }
 
+Buffalo_Data :: struct {
+    power: f32,
+}
+
 Fractal_Data :: union {
     Mandelbrot_Data,
     Julia_Data,
     Burning_Ship_Data,
     Tricorn_Data,
     Celtic_Data,
+    Buffalo_Data,
 }
 
 Fractal :: struct {

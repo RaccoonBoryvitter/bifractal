@@ -36,6 +36,7 @@ SHADERS=(
     "burning_ship:compute"
     "tricorn:compute"
     "celtic:compute"
+    "buffalo:compute"
 )
 
 for entry in "${SHADERS[@]}"; do

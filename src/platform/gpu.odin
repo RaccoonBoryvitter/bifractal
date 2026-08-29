@@ -77,6 +77,12 @@ create_compute_pipelines :: proc(
         fractal.CELTIC_SHADER_ENTRY,
         SHADER_FORMAT,
     )
+    pipes[.Buffalo] = create_compute_pipeline(
+        device,
+        fractal.BUFFALO_SHADER,
+        fractal.BUFFALO_SHADER_ENTRY,
+        SHADER_FORMAT,
+    )
     return pipes
 }
 

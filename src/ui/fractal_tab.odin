@@ -45,4 +45,8 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
     if fractal_kind == .Celtic {
         draw_celtic_tab(view)
     }
+
+    if fractal_kind == .Buffalo {
+        draw_buffalo_tab(view)
+    }
 }
