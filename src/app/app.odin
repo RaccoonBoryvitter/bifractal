@@ -112,6 +112,13 @@ app_dispatch_events :: proc(state: ^App_Context) {
                     constant = e.value,
                 }
             }
+        case events.Burning_Ship_Power_Changed:
+            #partial switch d in state.fractal.data {
+            case fractal.Burning_Ship_Data:
+                state.fractal.data = fractal.Burning_Ship_Data {
+                    power = e.value,
+                }
+            }
         case events.Settings_Reset:
             settings.reset(&state.settings)
         case events.Image_Save_Requested:

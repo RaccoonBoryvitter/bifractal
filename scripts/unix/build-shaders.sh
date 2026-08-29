@@ -32,6 +32,8 @@ find_shadercross
 
 SHADERS=(
     "mandelbrot:compute"
+    "julia:compute"
+    "burning_ship:compute"
 )
 
 for entry in "${SHADERS[@]}"; do

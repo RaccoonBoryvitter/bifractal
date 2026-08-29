@@ -43,6 +43,12 @@ init_fractal_state :: proc(
             base = base,
             data = Julia_Data{constant = complex(-0.8, 0.156)},
         }
+    case .Burning_Ship:
+        return Fractal {
+            kind = .Burning_Ship,
+            base = base,
+            data = Burning_Ship_Data{power = 2.0},
+        }
     }
     return Fractal{}
 }
@@ -51,9 +57,12 @@ fractal_uniform_size :: proc(fractal: ^Fractal) -> int {
     if _, ok := &fractal.data.(Mandelbrot_Data); ok {
         return size_of(Mandelbrot_Uniform)
     }
-	if _, ok := &fractal.data.(Julia_Data); ok {
-		return size_of(Julia_Uniform)
-	}
+    if _, ok := &fractal.data.(Julia_Data); ok {
+        return size_of(Julia_Uniform)
+    }
+    if _, ok := &fractal.data.(Burning_Ship_Data); ok {
+        return size_of(Burning_Ship_Uniform)
+    }
     return 0
 }
 
@@ -62,9 +71,13 @@ fractal_make_uniform :: proc(fractal: ^Fractal, dst: rawptr) -> bool {
         _, ok2 := mandelbrot_make_uniform(&fractal.base, d, dst)
         return ok2
     }
-	if d, ok := &fractal.data.(Julia_Data); ok {
-		_, ok2 := julia_make_uniform(&fractal.base, d, dst)
-		return ok2
-	}
+    if d, ok := &fractal.data.(Julia_Data); ok {
+        _, ok2 := julia_make_uniform(&fractal.base, d, dst)
+        return ok2
+    }
+    if d, ok := &fractal.data.(Burning_Ship_Data); ok {
+        _, ok2 := burning_ship_make_uniform(&fractal.base, d, dst)
+        return ok2
+    }
     return false
 }

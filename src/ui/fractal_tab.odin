@@ -10,7 +10,7 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
     if draw_enum_slider("Fractal", &fractal_kind) {
         append(
             &view.events.queue,
-            events.Fractal_Kind_Changed{value = fractal_kind}
+            events.Fractal_Kind_Changed{value = fractal_kind},
         )
     }
 
@@ -32,5 +32,9 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
 
     if fractal_kind == .Julia {
         draw_julia_tab(view)
+    }
+
+    if fractal_kind == .Burning_Ship {
+        draw_burning_ship_tab(view)
     }
 }

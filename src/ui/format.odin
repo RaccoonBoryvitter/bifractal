@@ -122,6 +122,8 @@ fractal_kind_name :: proc(f: ^fractal.Fractal) -> string {
         return "Mandelbrot"
     case .Julia:
         return "Julia"
+    case .Burning_Ship:
+        return "Burning Ship"
     }
     return "?"
 }
@@ -139,6 +141,10 @@ fractal_params_name :: proc(f: ^fractal.Fractal) -> string {
                 real(d.constant),
                 imag(d.constant),
             )
+        }
+    case .Burning_Ship:
+        if d, ok := &f.data.(fractal.Burning_Ship_Data); ok {
+            return fmt.tprintf("Power: %.2f", d.power)
         }
     }
     return ""

@@ -51,6 +51,10 @@ Julia_Constant_Changed :: struct {
     value: complex64,
 }
 
+Burning_Ship_Power_Changed :: struct {
+    value: f32,
+}
+
 Settings_Reset :: struct {}
 
 Image_Save_Requested :: struct {}
@@ -69,6 +73,7 @@ App_Event :: union {
     Fractal_Kind_Changed,
     Mandelbrot_Power_Changed,
     Julia_Constant_Changed,
+    Burning_Ship_Power_Changed,
     Settings_Reset,
     Image_Save_Requested,
 }

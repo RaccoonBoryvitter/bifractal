@@ -47,6 +47,7 @@ function Build-Shaders {
     $shaders = @(
         @{ Name = "mandelbrot"; Stage = "compute" }
         @{ Name = "julia"; Stage = "compute" }
+        @{ Name = "burning_ship"; Stage = "compute" }
     )
 
     foreach ($shader in $shaders) {
