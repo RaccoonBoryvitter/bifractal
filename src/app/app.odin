@@ -126,6 +126,13 @@ app_dispatch_events :: proc(state: ^App_Context) {
                     power = e.value,
                 }
             }
+        case events.Celtic_Power_Changed:
+            #partial switch d in state.fractal.data {
+            case fractal.Celtic_Data:
+                state.fractal.data = fractal.Celtic_Data {
+                    power = e.value,
+                }
+            }
         case events.Settings_Reset:
             settings.reset(&state.settings)
         case events.Image_Save_Requested:

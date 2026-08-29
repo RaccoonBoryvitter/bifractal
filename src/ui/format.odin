@@ -126,6 +126,8 @@ fractal_kind_name :: proc(f: ^fractal.Fractal) -> string {
         return "Burning Ship"
     case .Tricorn:
         return "Tricorn"
+    case .Celtic:
+        return "Celtic"
     }
     return "?"
 }
@@ -150,6 +152,10 @@ fractal_params_name :: proc(f: ^fractal.Fractal) -> string {
         }
     case .Tricorn:
         if d, ok := &f.data.(fractal.Tricorn_Data); ok {
+            return fmt.tprintf("Power: %.2f", d.power)
+        }
+    case .Celtic:
+        if d, ok := &f.data.(fractal.Celtic_Data); ok {
             return fmt.tprintf("Power: %.2f", d.power)
         }
     }

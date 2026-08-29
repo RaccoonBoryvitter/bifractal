@@ -55,6 +55,12 @@ init_fractal_state :: proc(
             base = base,
             data = Tricorn_Data{power = 2.0},
         }
+    case .Celtic:
+        return Fractal {
+            kind = .Celtic,
+            base = base,
+            data = Celtic_Data{power = 2.0},
+        }
     }
     return Fractal{}
 }
@@ -71,6 +77,9 @@ fractal_uniform_size :: proc(fractal: ^Fractal) -> int {
     }
     if _, ok := &fractal.data.(Tricorn_Data); ok {
         return size_of(Tricorn_Uniform)
+    }
+    if _, ok := &fractal.data.(Celtic_Data); ok {
+        return size_of(Celtic_Uniform)
     }
     return 0
 }
@@ -90,6 +99,10 @@ fractal_make_uniform :: proc(fractal: ^Fractal, dst: rawptr) -> bool {
     }
     if d, ok := &fractal.data.(Tricorn_Data); ok {
         _, ok2 := tricorn_make_uniform(&fractal.base, d, dst)
+        return ok2
+    }
+    if d, ok := &fractal.data.(Celtic_Data); ok {
+        _, ok2 := celtic_make_uniform(&fractal.base, d, dst)
         return ok2
     }
     return false

@@ -71,6 +71,12 @@ create_compute_pipelines :: proc(
         fractal.TRICORN_SHADER_ENTRY,
         SHADER_FORMAT,
     )
+    pipes[.Celtic] = create_compute_pipeline(
+        device,
+        fractal.CELTIC_SHADER,
+        fractal.CELTIC_SHADER_ENTRY,
+        SHADER_FORMAT,
+    )
     return pipes
 }
 
