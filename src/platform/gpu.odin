@@ -83,6 +83,12 @@ create_compute_pipelines :: proc(
         fractal.BUFFALO_SHADER_ENTRY,
         SHADER_FORMAT,
     )
+    pipes[.Cross] = create_compute_pipeline(
+        device,
+        fractal.CROSS_SHADER,
+        fractal.CROSS_SHADER_ENTRY,
+        SHADER_FORMAT,
+    )
     return pipes
 }
 

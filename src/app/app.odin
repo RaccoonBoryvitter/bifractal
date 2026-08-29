@@ -140,6 +140,13 @@ app_dispatch_events :: proc(state: ^App_Context) {
                     power = e.value,
                 }
             }
+        case events.Cross_Power_Changed:
+            #partial switch d in state.fractal.data {
+            case fractal.Cross_Data:
+                state.fractal.data = fractal.Cross_Data {
+                    power = e.value,
+                }
+            }
         case events.Settings_Reset:
             settings.reset(&state.settings)
         case events.Image_Save_Requested:

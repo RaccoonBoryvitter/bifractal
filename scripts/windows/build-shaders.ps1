@@ -51,6 +51,7 @@ function Build-Shaders {
         @{ Name = "tricorn"; Stage = "compute" }
         @{ Name = "celtic"; Stage = "compute" }
         @{ Name = "buffalo"; Stage = "compute" }
+        @{ Name = "cross"; Stage = "compute" }
     )
 
     foreach ($shader in $shaders) {

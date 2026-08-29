@@ -67,6 +67,10 @@ Buffalo_Power_Changed :: struct {
     value: f32,
 }
 
+Cross_Power_Changed :: struct {
+    value: f32,
+}
+
 Settings_Reset :: struct {}
 
 Image_Save_Requested :: struct {}
@@ -89,6 +93,7 @@ App_Event :: union {
     Tricorn_Power_Changed,
     Celtic_Power_Changed,
     Buffalo_Power_Changed,
+    Cross_Power_Changed,
     Settings_Reset,
     Image_Save_Requested,
 }
