@@ -11,6 +11,7 @@ Fractal_Kind :: enum {
     Celtic,
     Buffalo,
     Cross,
+    Heart,
 }
 
 Fractal_View :: struct {
@@ -78,6 +79,10 @@ Cross_Data :: struct {
     power: f32,
 }
 
+Heart_Data :: struct {
+    power: f32,
+}
+
 Fractal_Data :: union {
     Mandelbrot_Data,
     Julia_Data,
@@ -86,6 +91,7 @@ Fractal_Data :: union {
     Celtic_Data,
     Buffalo_Data,
     Cross_Data,
+    Heart_Data,
 }
 
 Fractal :: struct {

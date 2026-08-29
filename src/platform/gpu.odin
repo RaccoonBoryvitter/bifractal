@@ -89,6 +89,12 @@ create_compute_pipelines :: proc(
         fractal.CROSS_SHADER_ENTRY,
         SHADER_FORMAT,
     )
+    pipes[.Heart] = create_compute_pipeline(
+        device,
+        fractal.HEART_SHADER,
+        fractal.HEART_SHADER_ENTRY,
+        SHADER_FORMAT,
+    )
     return pipes
 }
 
