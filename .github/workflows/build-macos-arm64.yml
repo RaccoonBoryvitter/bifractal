@@ -15,7 +15,14 @@ jobs:
     name: Build
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Cache SDL3 build
+        uses: actions/cache@v4
+        with:
+          path: sdl-build
+          key: sdl3-${{ inputs.sdl_version }}-${{ runner.os }}-arm64
+          restore-keys: sdl3-${{ inputs.sdl_version }}-${{ runner.os }}-
 
       - name: Install Odin (${{ inputs.odin_version }})
         run: |
@@ -34,11 +41,12 @@ jobs:
           curl -fsSL -o sdl.tar.gz \
             "https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.sdl_version }}/SDL3-${{ inputs.sdl_version }}.tar.gz"
           tar -xzf sdl.tar.gz
+          export CC=clang CXX=clang++
           cmake -S "SDL3-${{ inputs.sdl_version }}" -B sdl-build \
             -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF
           cmake --build sdl-build -j"$(sysctl -n hw.ncpu)"
           sudo cmake --install sdl-build
-          rm -rf "SDL3-${{ inputs.sdl_version }}" sdl.tar.gz sdl-build
+          rm -rf "SDL3-${{ inputs.sdl_version }}" sdl.tar.gz
           pkg-config sdl3 --modversion
 
       - name: Build imgui static library
@@ -50,11 +58,14 @@ jobs:
           chmod +x scripts/unix/build.sh scripts/unix/_common.sh
           ./scripts/unix/build.sh
 
+      - name: Compute SHA256
+        run: bash .github/scripts/compute-sha256.sh
+
       - name: Package
-        run: zip -j bifractal-macos-arm64.zip build/bifractal
+        run: zip -j bifractal-macos-arm64.zip build/bifractal build/SHA256SUMS.txt
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bifractal-macos-arm64
           path: bifractal-macos-arm64.zip

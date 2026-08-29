@@ -3,6 +3,15 @@ name: build-linux
 on:
   workflow_call:
     inputs:
+      distro:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+      pkg:
+        required: true
+        type: string
       odin_version:
         required: true
         type: string
@@ -12,10 +21,28 @@ on:
 
 jobs:
   build:
-    name: Build
-    runs-on: ubuntu-24.04
+    name: Build (${{ inputs.distro }})
+    runs-on: ${{ inputs.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Cache system packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/cache/dnf
+            /var/cache/pacman/pkg
+            /var/cache/zypp
+          key: pkg-${{ runner.os }}-${{ inputs.pkg }}-${{ inputs.distro }}
+          restore-keys: pkg-${{ runner.os }}-${{ inputs.pkg }}-
+
+      - name: Cache SDL3 build
+        uses: actions/cache@v4
+        with:
+          path: sdl-build
+          key: sdl3-${{ inputs.sdl_version }}-${{ runner.os }}-${{ inputs.distro }}
+          restore-keys: sdl3-${{ inputs.sdl_version }}-${{ runner.os }}-
 
       - name: Install Odin (${{ inputs.odin_version }})
         run: |
@@ -27,29 +54,10 @@ jobs:
           sudo ln -sf /opt/odin/odin /usr/local/bin/odin
           odin version
 
-      - name: Install SDL3 ${{ inputs.sdl_version }} (source build)
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential git make \
-            pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev \
-            libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev \
-            libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
-            libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-            libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev \
-            clang python3 \
-            libc++-dev libc++abi-dev
-          curl -fsSL -o sdl.tar.gz \
-            "https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.sdl_version }}/SDL3-${{ inputs.sdl_version }}.tar.gz"
-          tar -xzf sdl.tar.gz
-          cmake -S "SDL3-${{ inputs.sdl_version }}" -B sdl-build \
-            -DCMAKE_BUILD_TYPE=Release -DSDL_SHARED=ON -DSDL_STATIC=OFF
-          cmake --build sdl-build -j"$(nproc)"
-          sudo cmake --install sdl-build
-          sudo ldconfig
-          rm -rf "SDL3-${{ inputs.sdl_version }}" sdl.tar.gz sdl-build
-          pkg-config sdl3 --modversion
+      - name: Install SDL3 ${{ inputs.sdl_version }}
+        run: bash .github/scripts/install-sdl3-${{ inputs.pkg }}.sh
+        env:
+          SDL_VERSION: ${{ inputs.sdl_version }}
 
       - name: Build imgui static library
         working-directory: deps/imgui
@@ -63,13 +71,17 @@ jobs:
       - name: Strip
         run: strip build/bifractal
 
+      - name: Compute SHA256
+        run: bash .github/scripts/compute-sha256.sh
+
       - name: Package
-        run: zip -j bifractal-linux-x86_64.zip build/bifractal
+        run: |
+          zip -j "bifractal-linux-${{ inputs.distro }}.zip" build/bifractal build/SHA256SUMS.txt
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: bifractal-linux-x86_64
-          path: bifractal-linux-x86_64.zip
+          name: bifractal-linux-${{ inputs.distro }}
+          path: bifractal-linux-${{ inputs.distro }}.zip
           if-no-files-found: error
           retention-days: 14

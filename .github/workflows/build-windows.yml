@@ -18,7 +18,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Odin (${{ inputs.odin_version }})
         run: |
@@ -40,7 +40,7 @@ jobs:
           Compress-Archive -Path build/bifractal.exe, "$odinRoot/vendor/sdl3/SDL3.dll" -DestinationPath bifractal-windows-x86_64.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bifractal-windows-x86_64
           path: bifractal-windows-x86_64.zip
