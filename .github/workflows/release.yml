@@ -1,0 +1,62 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux (${{ matrix.distro }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { distro: ubuntu-22.04,        runner: ubuntu-22.04,         pkg: apt    }
+          - { distro: ubuntu-24.04,        runner: ubuntu-24.04,         pkg: apt    }
+          - { distro: fedora-41,           runner: fedora-latest,        pkg: dnf    }
+          - { distro: arch,                runner: arch-latest,          pkg: pacman }
+          - { distro: opensuse-tumbleweed, runner: opensuse-tumbleweed, pkg: zypper }
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      distro: ${{ matrix.distro }}
+      runner: ${{ matrix.runner }}
+      pkg: ${{ matrix.pkg }}
+      odin_version: dev-2026-08
+      sdl_version: 3.4.2
+
+  windows:
+    name: Windows (x86_64)
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      odin_version: dev-2026-08
+      sdl_version: 3.4.2
+
+  macos-arm64:
+    name: macOS (arm64)
+    uses: ./.github/workflows/build-macos-arm64.yml
+    with:
+      odin_version: dev-2026-08
+      sdl_version: 3.4.2
+
+  publish:
+    name: Publish release assets
+    needs: [linux, windows, macos-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Publish to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/*.zip
+          fail_on_unmatched_files: false
+          generate_release_notes: true
