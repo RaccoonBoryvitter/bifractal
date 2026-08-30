@@ -95,6 +95,12 @@ create_compute_pipelines :: proc(
         fractal.HEART_SHADER_ENTRY,
         SHADER_FORMAT,
     )
+    pipes[.Perpendicular] = create_compute_pipeline(
+        device,
+        fractal.PERPENDICULAR_SHADER,
+        fractal.PERPENDICULAR_SHADER_ENTRY,
+        SHADER_FORMAT,
+    )
     return pipes
 }
 

@@ -79,6 +79,12 @@ init_fractal_state :: proc(
             base = base,
             data = Heart_Data{power = 2.0},
         }
+    case .Perpendicular:
+        return Fractal {
+            kind = .Perpendicular,
+            base = base,
+            data = Perpendicular_Data{power = 2.0},
+        }
     }
     return Fractal{}
 }
@@ -107,6 +113,9 @@ fractal_uniform_size :: proc(fractal: ^Fractal) -> int {
     }
     if _, ok := &fractal.data.(Heart_Data); ok {
         return size_of(Heart_Uniform)
+    }
+    if _, ok := &fractal.data.(Perpendicular_Data); ok {
+        return size_of(Perpendicular_Uniform)
     }
     return 0
 }
@@ -142,6 +151,10 @@ fractal_make_uniform :: proc(fractal: ^Fractal, dst: rawptr) -> bool {
     }
     if d, ok := &fractal.data.(Heart_Data); ok {
         _, ok2 := heart_make_uniform(&fractal.base, d, dst)
+        return ok2
+    }
+    if d, ok := &fractal.data.(Perpendicular_Data); ok {
+        _, ok2 := perpendicular_make_uniform(&fractal.base, d, dst)
         return ok2
     }
     return false

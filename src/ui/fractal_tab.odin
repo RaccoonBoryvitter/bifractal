@@ -57,4 +57,8 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
     if fractal_kind == .Heart {
         draw_heart_tab(view)
     }
+
+    if fractal_kind == .Perpendicular {
+        draw_perpendicular_tab(view)
+    }
 }

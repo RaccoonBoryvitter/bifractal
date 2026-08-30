@@ -134,6 +134,8 @@ fractal_kind_name :: proc(f: ^fractal.Fractal) -> string {
         return "Cross"
     case .Heart:
         return "Heart"
+    case .Perpendicular:
+        return "Perpendicular"
     }
     return "?"
 }
@@ -174,6 +176,10 @@ fractal_params_name :: proc(f: ^fractal.Fractal) -> string {
         }
     case .Heart:
         if d, ok := &f.data.(fractal.Heart_Data); ok {
+            return fmt.tprintf("Power: %.2f", d.power)
+        }
+    case .Perpendicular:
+        if d, ok := &f.data.(fractal.Perpendicular_Data); ok {
             return fmt.tprintf("Power: %.2f", d.power)
         }
     }
