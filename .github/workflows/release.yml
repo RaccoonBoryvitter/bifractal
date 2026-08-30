@@ -9,22 +9,49 @@ permissions:
   contents: write
 
 jobs:
-  linux:
-    name: Linux (${{ matrix.distro }})
+  linux-ubuntu:
+    name: Linux Ubuntu (${{ matrix.distro }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { distro: ubuntu-22.04,        runner: ubuntu-22.04,         pkg: apt    }
-          - { distro: ubuntu-24.04,        runner: ubuntu-24.04,         pkg: apt    }
-          - { distro: fedora-41,           runner: fedora-latest,        pkg: dnf    }
-          - { distro: arch,                runner: arch-latest,          pkg: pacman }
-          - { distro: opensuse-tumbleweed, runner: opensuse-tumbleweed, pkg: zypper }
+          - { distro: ubuntu-22.04, runner: ubuntu-22.04, pkg: apt }
+          - { distro: ubuntu-24.04, runner: ubuntu-24.04, pkg: apt }
     uses: ./.github/workflows/build-linux.yml
     with:
       distro: ${{ matrix.distro }}
       runner: ${{ matrix.runner }}
       pkg: ${{ matrix.pkg }}
+      odin_version: dev-2026-08
+      sdl_version: 3.4.2
+
+  linux-fedora:
+    name: Linux Fedora (best-effort)
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      distro: fedora-41
+      runner: fedora-latest
+      pkg: dnf
+      odin_version: dev-2026-08
+      sdl_version: 3.4.2
+
+  linux-arch:
+    name: Linux Arch (best-effort)
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      distro: arch
+      runner: arch-latest
+      pkg: pacman
+      odin_version: dev-2026-08
+      sdl_version: 3.4.2
+
+  linux-opensuse:
+    name: Linux openSUSE (best-effort)
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      distro: opensuse-tumbleweed
+      runner: opensuse-tumbleweed
+      pkg: zypper
       odin_version: dev-2026-08
       sdl_version: 3.4.2
 
@@ -44,7 +71,7 @@ jobs:
 
   publish:
     name: Publish release assets
-    needs: [linux, windows, macos-arm64]
+    needs: [linux-ubuntu, windows, macos-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
@@ -60,3 +87,69 @@ jobs:
           files: artifacts/*.zip
           fail_on_unmatched_files: false
           generate_release_notes: true
+
+  publish-fedora:
+    name: Attach Fedora asset
+    needs: [linux-fedora]
+    if: always()
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Fedora artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: bifractal-linux-fedora-41
+          path: artifacts/
+        continue-on-error: true
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/*.zip
+          fail_on_unmatched_files: false
+        continue-on-error: true
+
+  publish-arch:
+    name: Attach Arch asset
+    needs: [linux-arch]
+    if: always()
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Arch artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: bifractal-linux-arch
+          path: artifacts/
+        continue-on-error: true
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/*.zip
+          fail_on_unmatched_files: false
+        continue-on-error: true
+
+  publish-opensuse:
+    name: Attach openSUSE asset
+    needs: [linux-opensuse]
+    if: always()
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download openSUSE artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: bifractal-linux-opensuse-tumbleweed
+          path: artifacts/
+        continue-on-error: true
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/*.zip
+          fail_on_unmatched_files: false
+        continue-on-error: true
