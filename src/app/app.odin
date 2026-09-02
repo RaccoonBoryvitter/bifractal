@@ -34,7 +34,8 @@ App_Context :: struct {
 create_app_logger :: proc() -> log.Logger {
     when ODIN_DEBUG {
         return log.create_console_logger(.Debug)
-    } else {
+    }
+    else {
         return log.create_console_logger(.Info)
     }
 }
@@ -175,7 +176,7 @@ sync_drag_cursor :: proc(state: ^App_Context) {
     if state.fractal.base.camera.is_dragging {
         target = state.window.move_cursor
     }
-     else {
+    else {
         target = state.window.default_cursor
     }
     if target == nil {
@@ -196,7 +197,8 @@ init_app :: proc() -> ^App_Context {
     sdl.SetLogOutputFunction(platform.sdl_log_callback, &state.logger)
     when ODIN_DEBUG {
         sdl.SetLogPriorities(.DEBUG)
-    } else {
+    }
+    else {
         sdl.SetLogPriorities(.INFO)
     }
 
@@ -238,11 +240,14 @@ init_app :: proc() -> ^App_Context {
         string(sdl.GetGPUDeviceDriver(state.gpu.device)),
     )
 
-    state.gpu.pipelines = platform.create_compute_pipelines(state.gpu.device)
-    if state.gpu.pipelines == nil || len(state.gpu.pipelines) == 0 {
+    pipelines, pipelines_ok := platform.create_compute_pipelines(
+        state.gpu.device,
+    )
+    if !pipelines_ok {
         ok = false
         return nil
     }
+    state.gpu.pipelines = pipelines
 
     if platform.resize_gpu_output(&state.gpu, state.window.size) == nil {
         ok = false
@@ -342,6 +347,7 @@ destroy_app :: proc(state: ^App_Context) {
     if state.settings.dirty {
         settings.save(&state.settings)
     }
+    settings.deinit()
 
     render.destroy(&state.save)
 

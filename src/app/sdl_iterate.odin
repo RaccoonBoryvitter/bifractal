@@ -1,6 +1,7 @@
 package app
 
 import "base:runtime"
+import "core:math"
 
 import sdl "vendor:sdl3"
 
@@ -19,8 +20,17 @@ fps_update :: proc(state: ^App_Context) {
     elapsed := now - state.time.last_ticks
 
     if elapsed >= FPS_INTERVAL_MS {
-        state.time.current =
-            f32(state.time.frame_count) / (f32(elapsed) / 1000.0)
+        instant := f32(state.time.frame_count) / (f32(elapsed) / 1000.0)
+        if state.time.current == 0 {
+            state.time.current = instant
+        }
+        else {
+            state.time.current = math.lerp(
+                state.time.current,
+                instant,
+                f32(0.15),
+            )
+        }
         state.time.frame_count = 0
         state.time.last_ticks = now
     }
@@ -67,7 +77,7 @@ SDL_AppIterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
         gpu_name      = state.gpu.name,
         gpu_driver    = state.gpu.driver,
         fps           = state.time.current,
-        frame_time_ms = 1000.0 / max(state.time.current, 0.001),
+        frame_time_ms = 1000.0 / max(state.time.current, 1.0),
     }
     ui.create_imgui_ui(&ui_view)
     ui.draw_hud(&ui_view)

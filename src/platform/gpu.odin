@@ -45,63 +45,104 @@ init_gpu :: proc(window: ^sdl.Window) -> ^sdl.GPUDevice {
 
 create_compute_pipelines :: proc(
     device: ^sdl.GPUDevice,
-) -> map[fractal.Fractal_Kind]^sdl.GPUComputePipeline {
-    pipes := make(map[fractal.Fractal_Kind]^sdl.GPUComputePipeline)
-    pipes[.Mandelbrot] = create_compute_pipeline(
+) -> (
+    pipes: map[fractal.Fractal_Kind]^sdl.GPUComputePipeline,
+    ok: bool,
+) {
+    pipes = make(map[fractal.Fractal_Kind]^sdl.GPUComputePipeline)
+
+    cleanup :: proc(
+        pipes: ^map[fractal.Fractal_Kind]^sdl.GPUComputePipeline,
+        device: ^sdl.GPUDevice,
+    ) {
+        for _, pipeline in pipes^ {
+            sdl.ReleaseGPUComputePipeline(device, pipeline)
+        }
+        delete(pipes^)
+    }
+
+    p := create_compute_pipeline(
         device,
         fractal.MANDELBROT_SHADER,
         fractal.MANDELBROT_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Julia] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Mandelbrot] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.JULIA_SHADER,
         fractal.JULIA_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Burning_Ship] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Julia] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.BURNING_SHIP_SHADER,
         fractal.BURNING_SHIP_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Tricorn] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Burning_Ship] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.TRICORN_SHADER,
         fractal.TRICORN_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Celtic] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Tricorn] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.CELTIC_SHADER,
         fractal.CELTIC_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Buffalo] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Celtic] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.BUFFALO_SHADER,
         fractal.BUFFALO_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Cross] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Buffalo] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.CROSS_SHADER,
         fractal.CROSS_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Heart] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Cross] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.HEART_SHADER,
         fractal.HEART_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    pipes[.Perpendicular] = create_compute_pipeline(
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Heart] = p
+
+    p = create_compute_pipeline(
         device,
         fractal.PERPENDICULAR_SHADER,
         fractal.PERPENDICULAR_SHADER_ENTRY,
         SHADER_FORMAT,
     )
-    return pipes
+    if p == nil { cleanup(&pipes, device); return nil, false }
+    pipes[.Perpendicular] = p
+
+    return pipes, true
 }
 
 create_compute_pipeline :: proc(

@@ -1,5 +1,6 @@
 package settings
 
+import "base:runtime"
 import "core:encoding/json"
 import "core:log"
 import "core:os"
@@ -55,11 +56,23 @@ SETTINGS_FILE_NAME :: "settings.json"
 _cached_path: string
 
 @(private)
+_cached_allocator: runtime.Allocator
+
+@(private)
 _has_path: bool
 
 reset :: proc(state: ^Settings_State) {
     state.settings = default_settings()
     state.dirty = true
+}
+
+deinit :: proc() {
+    if _has_path && _cached_path != "" {
+        delete(_cached_path, _cached_allocator)
+        _cached_path = ""
+        _cached_allocator = {}
+    }
+    _has_path = false
 }
 
 init :: proc(allocator := context.allocator) -> bool {
@@ -78,6 +91,8 @@ init :: proc(allocator := context.allocator) -> bool {
         log.errorf("failed to clone base path: %v", clone_err)
         return false
     }
+    defer delete(dir, allocator)
+
     if dir == "" {
         log.warn(
             "SDL_GetBasePath returned an empty path; settings will not be persisted",
@@ -89,13 +104,17 @@ init :: proc(allocator := context.allocator) -> bool {
         []string{dir, SETTINGS_FILE_NAME},
         allocator,
     )
-    delete(dir, allocator)
     if join_err != nil {
         log.errorf("failed to join settings path: %v", join_err)
         return false
     }
 
+    if _has_path && _cached_path != "" {
+        delete(_cached_path, _cached_allocator)
+    }
+
     _cached_path = full
+    _cached_allocator = allocator
     _has_path = true
     return true
 }
