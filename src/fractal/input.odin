@@ -18,16 +18,16 @@ fractal_process_input :: proc(
         if ui_wants_keyboard {
             return Fractal_Input{}
         }
-        pan := f32(FRACTAL_PAN_FACTOR / fractal.base.camera.view.zoom)
+        pan := FRACTAL_PAN_FACTOR / fractal.base.camera.view.zoom
         switch event.key.key {
         case sdl.K_W:
-            return Fractal_Input{cmd = .Pan, delta = geom.Vec2{0, -pan}}
+            return Fractal_Input{cmd = .Pan, delta = {0, -pan}}
         case sdl.K_S:
-            return Fractal_Input{cmd = .Pan, delta = geom.Vec2{0, pan}}
+            return Fractal_Input{cmd = .Pan, delta = {0, pan}}
         case sdl.K_A:
-            return Fractal_Input{cmd = .Pan, delta = geom.Vec2{-pan, 0}}
+            return Fractal_Input{cmd = .Pan, delta = {-pan, 0}}
         case sdl.K_D:
-            return Fractal_Input{cmd = .Pan, delta = geom.Vec2{pan, 0}}
+            return Fractal_Input{cmd = .Pan, delta = {pan, 0}}
         case sdl.K_Q:
             return Fractal_Input{cmd = .Decrease_Iter}
         case sdl.K_E:
@@ -46,7 +46,7 @@ fractal_process_input :: proc(
         return Fractal_Input {
             cmd = .Zoom,
             pos = geom.Vec2{mouse_x * pixel_scale.x, mouse_y * pixel_scale.y},
-            delta = geom.Vec2{0, f32(event.wheel.y)},
+            delta = {0, f64(event.wheel.y)},
         }
     case .MOUSE_BUTTON_DOWN:
         if ui_wants_mouse || event.button.button != sdl.BUTTON_LEFT {
@@ -62,15 +62,14 @@ fractal_process_input :: proc(
         if ui_wants_mouse || !fractal.base.camera.is_dragging {
             return Fractal_Input{}
         }
-        dx := f32(event.motion.xrel) * pixel_scale.x
-        dy := f32(event.motion.yrel) * pixel_scale.y
-        drag_scale := f32(
+        dx := f64(event.motion.xrel) * f64(pixel_scale.x)
+        dy := f64(event.motion.yrel) * f64(pixel_scale.y)
+        drag_scale :=
             FRACTAL_MOUSE_DRAG_SCALE /
-            (f64(fractal.base.resolution.y) * fractal.base.camera.view.zoom),
-        )
+            (f64(fractal.base.resolution.y) * fractal.base.camera.view.zoom)
         return Fractal_Input {
             cmd = .Pan,
-            delta = geom.Vec2{-dx * drag_scale, -dy * drag_scale},
+            delta = {-dx * drag_scale, -dy * drag_scale},
         }
     }
 
@@ -86,8 +85,8 @@ fractal_apply_command :: proc(
     case .None:
         return
     case .Pan:
-        fractal.base.camera.view.center.x += f64(input.delta.x)
-        fractal.base.camera.view.center.y += f64(input.delta.y)
+        fractal.base.camera.view.center.x += input.delta.x
+        fractal.base.camera.view.center.y += input.delta.y
     case .Zoom:
         mouse_complex := view_screen_to_complex(
             input.pos,
@@ -99,7 +98,7 @@ fractal_apply_command :: proc(
         )
 
         fractal.base.zoom_level +=
-            f64(input.delta.y) * FRACTAL_ZOOM_SCROLL_FACTOR
+            input.delta.y * FRACTAL_ZOOM_SCROLL_FACTOR
         fractal.base.zoom_level = max(
             fractal.base.zoom_level,
             FRACTAL_MIN_ZOOM_LOG,

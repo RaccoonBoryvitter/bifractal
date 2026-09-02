@@ -40,7 +40,7 @@ Fractal_Command :: enum {
 Fractal_Input :: struct {
     cmd:   Fractal_Command,
     pos:   geom.Vec2,
-    delta: geom.Vec2,
+    delta: [2]f64,
 }
 
 Fractal_Base :: struct {
