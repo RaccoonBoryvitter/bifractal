@@ -51,7 +51,7 @@ draw_hud :: proc(view: ^Ui_View) {
     if s.show_zoom do row("Zoom", format_zoom(view.fractal.base.camera.view.zoom))
     if s.show_iter do row("Iter", fmt.tprintf("%d", view.fractal.base.max_iter))
     if s.show_mouse {
-        mouse := [2]f32 {
+        mouse := [2]f64 {
             real(view.ui_state.mouse_complex),
             imag(view.ui_state.mouse_complex),
         }

@@ -10,12 +10,14 @@ view_screen_to_complex :: proc(
     screen: geom.Vec2,
     size: geom.Extent_2D,
     view: Fractal_View,
-) -> complex64 {
-    w := f32(size.w)
-    h := f32(size.h)
+) -> complex128 {
+    w := f64(size.w)
+    h := f64(size.h)
+    sx := f64(screen.x)
+    sy := f64(screen.y)
     return complex(
-        (screen.x - w * 0.5) / (h * view.zoom) + view.center.x,
-        -(screen.y - h * 0.5) / (h * view.zoom) + view.center.y,
+        (sx - w * 0.5) / (h * view.zoom) + view.center.x,
+        -(sy - h * 0.5) / (h * view.zoom) + view.center.y,
     )
 }
 

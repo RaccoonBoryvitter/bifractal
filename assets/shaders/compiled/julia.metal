@@ -5,8 +5,10 @@ using namespace metal;
 
 struct type_UniformBlock
 {
-    float2 center;
+    float2 center_hi;
+    float2 center_lo;
     float zoom;
+    packed_float2 _pad;
     int max_iter;
     float4 palette_offset;
     float4 palette_amplitude;
@@ -21,60 +23,60 @@ kernel void main0(constant type_UniformBlock& UniformBlock [[buffer(0)]], textur
 {
     do
     {
-        int2 _52 = int2(gl_GlobalInvocationID.xy);
-        bool _66;
-        if (_52.x < int(UniformBlock.resolution.x))
+        int2 _53 = int2(gl_GlobalInvocationID.xy);
+        bool _67;
+        if (_53.x < int(UniformBlock.resolution.x))
         {
-            _66 = _52.y >= int(UniformBlock.resolution.y);
+            _67 = _53.y >= int(UniformBlock.resolution.y);
         }
         else
         {
-            _66 = true;
+            _67 = true;
         }
-        if (_66)
+        if (_67)
         {
             break;
         }
-        float2 _84;
-        int _87;
-        _84 = ((float2(_52) - (UniformBlock.resolution * 0.5)) / float2(UniformBlock.resolution.y * UniformBlock.zoom)) + UniformBlock.center;
-        _87 = 0;
-        float2 _85;
-        int _88;
+        float2 _88;
+        int _91;
+        _88 = ((float2(_53) - (UniformBlock.resolution * 0.5)) / float2(UniformBlock.resolution.y * UniformBlock.zoom)) + (UniformBlock.center_hi + UniformBlock.center_lo);
+        _91 = 0;
+        float2 _89;
         int _92;
-        bool _93;
+        int _96;
+        bool _97;
         for (;;)
         {
-            _92 = UniformBlock.max_iter;
-            _93 = _87 < _92;
-            bool _98;
-            if (_93)
+            _96 = UniformBlock.max_iter;
+            _97 = _91 < _96;
+            bool _102;
+            if (_97)
             {
-                _98 = dot(_84, _84) < 4.0;
+                _102 = dot(_88, _88) < 4.0;
             }
             else
             {
-                _98 = false;
+                _102 = false;
             }
-            if (_98)
+            if (_102)
             {
-                float2 _115;
+                float2 _119;
                 do
                 {
-                    float _102 = dot(_84, _84);
-                    if (_102 < 1.0000000195414813782625560981111e-24)
+                    float _106 = dot(_88, _88);
+                    if (_106 < 1.0000000195414813782625560981111e-24)
                     {
-                        _115 = float2(0.0);
+                        _119 = float2(0.0);
                         break;
                     }
-                    float _110 = 2.0 * precise::atan2(_84.y, _84.x);
-                    _115 = float2(cos(_110), sin(_110)) * powr(_102, 1.0);
+                    float _114 = 2.0 * precise::atan2(_88.y, _88.x);
+                    _119 = float2(cos(_114), sin(_114)) * powr(_106, 1.0);
                     break;
                 } while(false);
-                _85 = _115 + UniformBlock.constant0;
-                _88 = _87 + 1;
-                _84 = _85;
-                _87 = _88;
+                _89 = _119 + UniformBlock.constant0;
+                _92 = _91 + 1;
+                _88 = _89;
+                _91 = _92;
                 continue;
             }
             else
@@ -82,16 +84,16 @@ kernel void main0(constant type_UniformBlock& UniformBlock [[buffer(0)]], textur
                 break;
             }
         }
-        float4 _144;
-        if (_93)
+        float4 _148;
+        if (_97)
         {
-            _144 = UniformBlock.palette_offset + (UniformBlock.palette_amplitude * cos(((UniformBlock.palette_frequency * (((float(_87) - log2(log2(dot(_84, _84)))) + 4.0) / float(_92))) + UniformBlock.palette_phase) * 6.28318023681640625));
+            _148 = UniformBlock.palette_offset + (UniformBlock.palette_amplitude * cos(((UniformBlock.palette_frequency * (((float(_91) - log2(log2(dot(_88, _88)))) + 4.0) / float(_96))) + UniformBlock.palette_phase) * 6.28318023681640625));
         }
         else
         {
-            _144 = UniformBlock.interior_color;
+            _148 = UniformBlock.interior_color;
         }
-        output_image.write(float4(_144.xyz, 1.0), uint2(gl_GlobalInvocationID.xy));
+        output_image.write(float4(_148.xyz, 1.0), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

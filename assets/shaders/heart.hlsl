@@ -3,8 +3,10 @@
 RWTexture2D<float4> output_image : register(u0, space1);
 
 cbuffer UniformBlock : register(b0, space2) {
-    float2 center;
+    float2 center_hi;
+    float2 center_lo;
     float  zoom;
+    float2 _pad;
     int    max_iter;
 
     float4 palette_offset;
@@ -23,6 +25,7 @@ void main(uint3 global_id : SV_DispatchThreadID) {
     int2 pixel = int2(global_id.xy);
     if (pixel.x >= int(resolution.x) || pixel.y >= int(resolution.y)) return;
 
+    float2 center = center_hi + center_lo;
     float2 uv = (float2(pixel) - resolution * 0.5) / (resolution.y * zoom) + center;
     uv.x = abs(uv.x);
 

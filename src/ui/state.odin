@@ -16,7 +16,7 @@ Channel :: enum {
 
 Ui_State :: struct {
     ctx:              ^im.Context,
-    mouse_complex:    complex64,
+    mouse_complex:    complex128,
     selected_channel: Channel,
 }
 

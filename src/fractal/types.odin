@@ -16,8 +16,8 @@ Fractal_Kind :: enum {
 }
 
 Fractal_View :: struct {
-    center: [2]f32,
-    zoom:   f32,
+    center: [2]f64,
+    zoom:   f64,
 }
 
 Fractal_Camera :: struct {
@@ -49,7 +49,7 @@ Fractal_Base :: struct {
     palette:        palette.Palette,
     interior_color: [4]f32,
     resolution:     [2]f32,
-    zoom_level:     f32,
+    zoom_level:     f64,
 }
 
 Mandelbrot_Data :: struct {

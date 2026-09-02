@@ -7,7 +7,7 @@ import "../fractal"
 import "../palette"
 import "../settings"
 
-format_zoom :: proc(zoom: f32) -> string {
+format_zoom :: proc(zoom: f64) -> string {
     if zoom > 1_000_000 || zoom < 0.000_001 {
         return fmt.tprintf("%e", zoom)
     }
@@ -16,7 +16,7 @@ format_zoom :: proc(zoom: f32) -> string {
 
 FRACTION_MAX_WIDTH :: 30
 
-format_coord :: proc(v: [2]f32, format: settings.Coord_Format) -> string {
+format_coord :: proc(v: [2]f64, format: settings.Coord_Format) -> string {
     switch format {
     case .Decimal:
         return fmt.tprintf("%+.6f %+.6fi", v.x, v.y)
@@ -45,7 +45,7 @@ format_coord :: proc(v: [2]f32, format: settings.Coord_Format) -> string {
 }
 
 @(private = "file")
-format_fraction :: proc(v: f32) -> string {
+format_fraction :: proc(v: f64) -> string {
     if math.is_nan(v) || math.is_inf(v) {
         return fmt.tprintf("%g", v)
     }
@@ -59,7 +59,7 @@ format_fraction :: proc(v: f32) -> string {
         return fmt.tprintf("%.6f", v)
     }
 
-    approx := f32(num) / f32(den)
+    approx := f64(num) / f64(den)
     if math.abs(v - approx) > 1.0e-5 * max(1.0, math.abs(v)) {
         return fmt.tprintf("%.6f", v)
     }
@@ -71,7 +71,7 @@ format_fraction :: proc(v: f32) -> string {
 }
 
 @(private = "file")
-continued_fraction :: proc(v: f32) -> (num, den: int, ok: bool) {
+continued_fraction :: proc(v: f64) -> (num, den: int, ok: bool) {
     if math.is_nan(v) || math.is_inf(v) {
         return 0, 0, false
     }
@@ -90,10 +90,10 @@ continued_fraction :: proc(v: f32) -> (num, den: int, ok: bool) {
 
     for _ in 0 ..< max_iter {
         a := int(math.floor(x))
-        if f32(a) > x - 1.0e-9 && f32(a) < x + 1.0e-9 {
-            x = f32(a)
+        if f64(a) > x - 1.0e-9 && f64(a) < x + 1.0e-9 {
+            x = f64(a)
         }
-        x = x - f32(a)
+        x = x - f64(a)
 
         new_num := a * num + pnum
         new_den := a * den + pden

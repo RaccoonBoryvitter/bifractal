@@ -27,7 +27,7 @@ init_fractal_state :: proc(
             phase = {0.0, 0.10, 0.20, 0.0},
         },
         interior_color = {0.0, 0.0, 0.0, 1.0},
-        zoom_level = math.log2(f32(FRACTAL_DEFAULT_ZOOM)),
+        zoom_level = math.log2(FRACTAL_DEFAULT_ZOOM),
     }
 
     switch kind {
