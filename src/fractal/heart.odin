@@ -10,6 +10,7 @@ Heart_Params :: struct {
     interior_color: [4]f32,
     resolution:     [2]f32,
     power:          f32,
+    _pad:           f32,
 }
 
 Heart_Uniform :: struct {
@@ -17,6 +18,8 @@ Heart_Uniform :: struct {
     zoom:         f32,
     using params: Heart_Params,
 }
+
+#assert(size_of(Heart_Uniform) % 16 == 0)
 
 heart_make_uniform :: proc(
     base: ^Fractal_Base,

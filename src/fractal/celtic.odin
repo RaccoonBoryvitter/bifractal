@@ -10,6 +10,7 @@ Celtic_Params :: struct {
     interior_color: [4]f32,
     resolution:     [2]f32,
     power:          f32,
+    _pad:           f32,
 }
 
 Celtic_Uniform :: struct {
@@ -17,6 +18,8 @@ Celtic_Uniform :: struct {
     zoom:         f32,
     using params: Celtic_Params,
 }
+
+#assert(size_of(Celtic_Uniform) % 16 == 0)
 
 celtic_make_uniform :: proc(
     base: ^Fractal_Base,

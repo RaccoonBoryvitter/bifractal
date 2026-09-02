@@ -17,6 +17,8 @@ Julia_Uniform :: struct {
     using params: Julia_Params,
 }
 
+#assert(size_of(Julia_Uniform) % 16 == 0)
+
 julia_make_uniform :: proc(
     base: ^Fractal_Base,
     data: ^Julia_Data,

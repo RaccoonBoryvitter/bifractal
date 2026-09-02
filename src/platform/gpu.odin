@@ -61,86 +61,17 @@ create_compute_pipelines :: proc(
         delete(pipes^)
     }
 
-    p := create_compute_pipeline(
-        device,
-        fractal.MANDELBROT_SHADER,
-        fractal.MANDELBROT_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Mandelbrot] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.JULIA_SHADER,
-        fractal.JULIA_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Julia] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.BURNING_SHIP_SHADER,
-        fractal.BURNING_SHIP_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Burning_Ship] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.TRICORN_SHADER,
-        fractal.TRICORN_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Tricorn] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.CELTIC_SHADER,
-        fractal.CELTIC_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Celtic] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.BUFFALO_SHADER,
-        fractal.BUFFALO_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Buffalo] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.CROSS_SHADER,
-        fractal.CROSS_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Cross] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.HEART_SHADER,
-        fractal.HEART_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Heart] = p
-
-    p = create_compute_pipeline(
-        device,
-        fractal.PERPENDICULAR_SHADER,
-        fractal.PERPENDICULAR_SHADER_ENTRY,
-        SHADER_FORMAT,
-    )
-    if p == nil { cleanup(&pipes, device); return nil, false }
-    pipes[.Perpendicular] = p
+    for kind in fractal.Fractal_Kind {
+        impl := fractal.FRACTAL_REGISTRY[kind]
+        p := create_compute_pipeline(
+            device,
+            impl.shader_bytes,
+            impl.shader_entry,
+            SHADER_FORMAT,
+        )
+        if p == nil { cleanup(&pipes, device); return nil, false }
+        pipes[kind] = p
+    }
 
     return pipes, true
 }

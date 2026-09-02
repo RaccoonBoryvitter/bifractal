@@ -10,6 +10,7 @@ Perpendicular_Params :: struct {
     interior_color: [4]f32,
     resolution:     [2]f32,
     power:          f32,
+    _pad:           f32,
 }
 
 Perpendicular_Uniform :: struct {
@@ -17,6 +18,8 @@ Perpendicular_Uniform :: struct {
     zoom:         f32,
     using params: Perpendicular_Params,
 }
+
+#assert(size_of(Perpendicular_Uniform) % 16 == 0)
 
 perpendicular_make_uniform :: proc(
     base: ^Fractal_Base,

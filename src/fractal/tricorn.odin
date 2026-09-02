@@ -10,6 +10,7 @@ Tricorn_Params :: struct {
     interior_color: [4]f32,
     resolution:     [2]f32,
     power:          f32,
+    _pad:           f32,
 }
 
 Tricorn_Uniform :: struct {
@@ -17,6 +18,8 @@ Tricorn_Uniform :: struct {
     zoom:         f32,
     using params: Tricorn_Params,
 }
+
+#assert(size_of(Tricorn_Uniform) % 16 == 0)
 
 tricorn_make_uniform :: proc(
     base: ^Fractal_Base,

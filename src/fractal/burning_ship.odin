@@ -10,6 +10,7 @@ Burning_Ship_Params :: struct {
     interior_color: [4]f32,
     resolution:     [2]f32,
     power:          f32,
+    _pad:           f32,
 }
 
 Burning_Ship_Uniform :: struct {
@@ -17,6 +18,8 @@ Burning_Ship_Uniform :: struct {
     zoom:         f32,
     using params: Burning_Ship_Params,
 }
+
+#assert(size_of(Burning_Ship_Uniform) % 16 == 0)
 
 burning_ship_make_uniform :: proc(
     base: ^Fractal_Base,

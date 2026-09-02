@@ -10,6 +10,7 @@ Cross_Params :: struct {
     interior_color: [4]f32,
     resolution:     [2]f32,
     power:          f32,
+    _pad:           f32,
 }
 
 Cross_Uniform :: struct {
@@ -17,6 +18,8 @@ Cross_Uniform :: struct {
     zoom:         f32,
     using params: Cross_Params,
 }
+
+#assert(size_of(Cross_Uniform) % 16 == 0)
 
 cross_make_uniform :: proc(
     base: ^Fractal_Base,

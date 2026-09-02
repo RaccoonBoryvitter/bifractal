@@ -90,72 +90,17 @@ init_fractal_state :: proc(
 }
 
 fractal_uniform_size :: proc(fractal: ^Fractal) -> int {
-    if _, ok := &fractal.data.(Mandelbrot_Data); ok {
-        return size_of(Mandelbrot_Uniform)
-    }
-    if _, ok := &fractal.data.(Julia_Data); ok {
-        return size_of(Julia_Uniform)
-    }
-    if _, ok := &fractal.data.(Burning_Ship_Data); ok {
-        return size_of(Burning_Ship_Uniform)
-    }
-    if _, ok := &fractal.data.(Tricorn_Data); ok {
-        return size_of(Tricorn_Uniform)
-    }
-    if _, ok := &fractal.data.(Celtic_Data); ok {
-        return size_of(Celtic_Uniform)
-    }
-    if _, ok := &fractal.data.(Buffalo_Data); ok {
-        return size_of(Buffalo_Uniform)
-    }
-    if _, ok := &fractal.data.(Cross_Data); ok {
-        return size_of(Cross_Uniform)
-    }
-    if _, ok := &fractal.data.(Heart_Data); ok {
-        return size_of(Heart_Uniform)
-    }
-    if _, ok := &fractal.data.(Perpendicular_Data); ok {
-        return size_of(Perpendicular_Uniform)
+    impl := FRACTAL_REGISTRY[fractal.kind]
+    if impl.uniform_size != nil {
+        return impl.uniform_size(fractal)
     }
     return 0
 }
 
 fractal_make_uniform :: proc(fractal: ^Fractal, dst: rawptr) -> bool {
-    if d, ok := &fractal.data.(Mandelbrot_Data); ok {
-        _, ok2 := mandelbrot_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Julia_Data); ok {
-        _, ok2 := julia_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Burning_Ship_Data); ok {
-        _, ok2 := burning_ship_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Tricorn_Data); ok {
-        _, ok2 := tricorn_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Celtic_Data); ok {
-        _, ok2 := celtic_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Buffalo_Data); ok {
-        _, ok2 := buffalo_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Cross_Data); ok {
-        _, ok2 := cross_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Heart_Data); ok {
-        _, ok2 := heart_make_uniform(&fractal.base, d, dst)
-        return ok2
-    }
-    if d, ok := &fractal.data.(Perpendicular_Data); ok {
-        _, ok2 := perpendicular_make_uniform(&fractal.base, d, dst)
-        return ok2
+    impl := FRACTAL_REGISTRY[fractal.kind]
+    if impl.make_uniform != nil {
+        return impl.make_uniform(fractal, dst)
     }
     return false
 }
