@@ -9,7 +9,7 @@ import "../geom"
 fractal_process_input :: proc(
     fractal: ^Fractal,
     event: ^sdl.Event,
-    window: ^sdl.Window,
+    pixel_scale: geom.Vec2,
     ui_wants_mouse: bool,
     ui_wants_keyboard: bool,
 ) -> Fractal_Input {
@@ -43,10 +43,9 @@ fractal_process_input :: proc(
         }
         mouse_x, mouse_y: f32
         _ = sdl.GetMouseState(&mouse_x, &mouse_y)
-        scale := get_window_pixel_scale(window)
         return Fractal_Input {
             cmd = .Zoom,
-            pos = geom.Vec2{mouse_x * scale.x, mouse_y * scale.y},
+            pos = geom.Vec2{mouse_x * pixel_scale.x, mouse_y * pixel_scale.y},
             delta = geom.Vec2{0, f32(event.wheel.y)},
         }
     case .MOUSE_BUTTON_DOWN:
@@ -63,9 +62,8 @@ fractal_process_input :: proc(
         if ui_wants_mouse || !fractal.base.camera.is_dragging {
             return Fractal_Input{}
         }
-        scale := get_window_pixel_scale(window)
-        dx := f32(event.motion.xrel) * scale.x
-        dy := f32(event.motion.yrel) * scale.y
+        dx := f32(event.motion.xrel) * pixel_scale.x
+        dy := f32(event.motion.yrel) * pixel_scale.y
         drag_scale :=
             FRACTAL_MOUSE_DRAG_SCALE /
             (fractal.base.resolution.y * fractal.base.camera.view.zoom)

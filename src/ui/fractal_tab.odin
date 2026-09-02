@@ -5,6 +5,12 @@ import im "deps:imgui"
 import "../fractal"
 import "../geom"
 
+MIN_POWER: f32 : 1.5
+MAX_POWER: f32 : 6.0
+
+MIN_JULIA: f32 : -1.5
+MAX_JULIA: f32 : 1.5
+
 draw_fractal_tab :: proc(view: ^Ui_View) {
     fractal_kind := view.fractal.kind
     if draw_enum_slider("Fractal", &fractal_kind) {
@@ -34,15 +40,24 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
     im.Separator()
 
     switch fractal_kind {
-        case .Mandelbrot: draw_mandelbrot_tab(view)
-        case .Julia: draw_julia_tab(view)
-        case .Burning_Ship: draw_burning_ship_tab(view)
-        case .Tricorn: draw_tricorn_tab(view)
-        case .Celtic: draw_celtic_tab(view)
-        case .Buffalo: draw_buffalo_tab(view)
-        case .Cross: draw_cross_tab(view)
-        case .Heart: draw_heart_tab(view)
-        case .Perpendicular: draw_perpendicular_tab(view)
+    case .Mandelbrot:
+        draw_mandelbrot_tab(view)
+    case .Julia:
+        draw_julia_tab(view)
+    case .Burning_Ship:
+        draw_burning_ship_tab(view)
+    case .Tricorn:
+        draw_tricorn_tab(view)
+    case .Celtic:
+        draw_celtic_tab(view)
+    case .Buffalo:
+        draw_buffalo_tab(view)
+    case .Cross:
+        draw_cross_tab(view)
+    case .Heart:
+        draw_heart_tab(view)
+    case .Perpendicular:
+        draw_perpendicular_tab(view)
     }
 }
 
@@ -53,7 +68,7 @@ draw_mandelbrot_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }
 
 @(private = "file")
@@ -64,7 +79,7 @@ draw_julia_tab :: proc(view: ^Ui_View) {
     }
 
     constant_parts := transmute([2]f32)data.constant
-    if im.SliderFloat2("Constant", &constant_parts, -1.5, 1.5) {
+    if im.SliderFloat2("Constant", &constant_parts, MIN_JULIA, MAX_JULIA) {
         data.constant = transmute(complex64)constant_parts
     }
 }
@@ -76,7 +91,7 @@ draw_burning_ship_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }
 
 @(private = "file")
@@ -86,9 +101,8 @@ draw_tricorn_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }
-
 
 @(private = "file")
 draw_celtic_tab :: proc(view: ^Ui_View) {
@@ -97,7 +111,7 @@ draw_celtic_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }
 
 @(private = "file")
@@ -107,7 +121,7 @@ draw_buffalo_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }
 
 @(private = "file")
@@ -117,7 +131,7 @@ draw_cross_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }
 
 @(private = "file")
@@ -127,7 +141,7 @@ draw_heart_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }
 
 @(private = "file")
@@ -137,5 +151,5 @@ draw_perpendicular_tab :: proc(view: ^Ui_View) {
         return
     }
 
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+    im.SliderFloat("Power", &data.power, MIN_POWER, MAX_POWER)
 }

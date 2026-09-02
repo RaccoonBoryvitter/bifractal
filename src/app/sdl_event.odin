@@ -60,7 +60,7 @@ SDL_AppEvent :: proc "c" (
     input := fractal.fractal_process_input(
         &state.fractal,
         event,
-        state.window.handle,
+        state.window.pixel_scale,
         is_mouse_captured,
         io.WantCaptureKeyboard,
     )

@@ -12,7 +12,8 @@ Frame_Pass :: enum {
 }
 
 Render_Context :: struct {
-    cmd:     ^sdl.GPUCommandBuffer,
+    backing: [4096]byte,
     scratch: mem.Arena,
+    cmd:     ^sdl.GPUCommandBuffer,
     pass:    Frame_Pass,
 }

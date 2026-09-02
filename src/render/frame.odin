@@ -31,8 +31,7 @@ render_context_begin :: proc(
         return ctx, false
     }
 
-    backing := make([]byte, 4 * 1024, context.temp_allocator)
-    mem.arena_init(&ctx.scratch, backing)
+    mem.arena_init(&ctx.scratch, ctx.backing[:])
 
     return ctx, true
 }
@@ -65,12 +64,21 @@ render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
     sdl.BindGPUComputePipeline(compute_pass, view.gpu.pipelines[view.kind])
 
     uniform_size := fractal.fractal_uniform_size(view.fractal)
-    uniform, alloc_err := mem.arena_alloc(&ctx.scratch, uniform_size)
-    if alloc_err != .None {
-        sdl.EndGPUComputePass(compute_pass)
-        ctx.pass = .None
-        return
+    uniform: rawptr
+    if uniform_size <= len(ctx.backing) {
+        v, alloc_err := mem.arena_alloc(&ctx.scratch, uniform_size)
+        if alloc_err != .None {
+            sdl.EndGPUComputePass(compute_pass)
+            ctx.pass = .None
+            return
+        }
+        uniform = v
     }
+    else {
+        backing_fallback := make([]byte, uniform_size, context.temp_allocator)
+        uniform = raw_data(backing_fallback)
+    }
+
     if !fractal.fractal_make_uniform(view.fractal, uniform) {
         sdl.EndGPUComputePass(compute_pass)
         ctx.pass = .None
@@ -89,16 +97,16 @@ render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
     ctx.pass = .None
 }
 
-render_blit_pass :: proc(
+render_acquire_swapchain :: proc(
     view: ^Render_View,
     ctx: ^Render_Context,
 ) -> (
     swapchain_texture: ^sdl.GPUTexture,
+    width, height: u32,
     ok: bool,
 ) {
     ctx.pass = .Blit
 
-    width, height: u32
     ok = sdl.WaitAndAcquireGPUSwapchainTexture(
         ctx.cmd,
         view.window,
@@ -109,12 +117,20 @@ render_blit_pass :: proc(
     if !ok {
         log.errorf("unable to acquire swapchain texture: %s", sdl.GetError())
         ctx.pass = .None
-        return nil, false
+        return nil, 0, 0, false
     }
-    if swapchain_texture == nil {
-        ctx.pass = .None
-        return nil, true
-    }
+
+    ctx.pass = .None
+    return swapchain_texture, width, height, true
+}
+
+render_blit_pass :: proc(
+    view: ^Render_View,
+    ctx: ^Render_Context,
+    swapchain_texture: ^sdl.GPUTexture,
+    width, height: u32,
+) {
+    ctx.pass = .Blit
 
     sdl.BlitGPUTexture(
         ctx.cmd,
@@ -144,7 +160,6 @@ render_blit_pass :: proc(
     )
 
     ctx.pass = .None
-    return swapchain_texture, true
 }
 
 render_ui_pass :: proc(
@@ -187,15 +202,20 @@ render_present_frame :: proc(view: ^Render_View) -> sdl.AppResult {
     }
     defer render_context_end(&ctx)
 
-    render_compute_pass(view, &ctx)
-
-    swapchain_texture, blit_ok := render_blit_pass(view, &ctx)
-    if !blit_ok {
+    swapchain_texture, width, height, acquire_ok := render_acquire_swapchain(
+        view,
+        &ctx,
+    )
+    if !acquire_ok {
         return .FAILURE
     }
     if swapchain_texture == nil {
         return .CONTINUE
     }
+
+    render_compute_pass(view, &ctx)
+
+    render_blit_pass(view, &ctx, swapchain_texture, width, height)
 
     render_ui_pass(view, &ctx, swapchain_texture)
 
