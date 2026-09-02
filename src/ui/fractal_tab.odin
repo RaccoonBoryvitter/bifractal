@@ -33,45 +33,22 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
 
     im.Separator()
 
-    if fractal_kind == .Mandelbrot {
-        draw_mandelbrot_tab(view)
-    }
-
-    if fractal_kind == .Julia {
-        draw_julia_tab(view)
-    }
-
-    if fractal_kind == .Burning_Ship {
-        draw_burning_ship_tab(view)
-    }
-
-    if fractal_kind == .Tricorn {
-        draw_tricorn_tab(view)
-    }
-
-    if fractal_kind == .Celtic {
-        draw_celtic_tab(view)
-    }
-
-    if fractal_kind == .Buffalo {
-        draw_buffalo_tab(view)
-    }
-
-    if fractal_kind == .Cross {
-        draw_cross_tab(view)
-    }
-
-    if fractal_kind == .Heart {
-        draw_heart_tab(view)
-    }
-
-    if fractal_kind == .Perpendicular {
-        draw_perpendicular_tab(view)
+    switch fractal_kind {
+        case .Mandelbrot: draw_mandelbrot_tab(view)
+        case .Julia: draw_julia_tab(view)
+        case .Burning_Ship: draw_burning_ship_tab(view)
+        case .Tricorn: draw_tricorn_tab(view)
+        case .Celtic: draw_celtic_tab(view)
+        case .Buffalo: draw_buffalo_tab(view)
+        case .Cross: draw_cross_tab(view)
+        case .Heart: draw_heart_tab(view)
+        case .Perpendicular: draw_perpendicular_tab(view)
     }
 }
 
-draw_buffalo_tab :: proc(view: ^Ui_View) {
-    data, ok := &view.fractal.data.(fractal.Buffalo_Data)
+@(private = "file")
+draw_mandelbrot_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Mandelbrot_Data)
     if !ok {
         return
     }
@@ -79,42 +56,7 @@ draw_buffalo_tab :: proc(view: ^Ui_View) {
     im.SliderFloat("Power", &data.power, 1.5, 6.0)
 }
 
-draw_burning_ship_tab :: proc(view: ^Ui_View) {
-    data, ok := &view.fractal.data.(fractal.Burning_Ship_Data)
-    if !ok {
-        return
-    }
-
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
-}
-
-draw_celtic_tab :: proc(view: ^Ui_View) {
-    data, ok := &view.fractal.data.(fractal.Celtic_Data)
-    if !ok {
-        return
-    }
-
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
-}
-
-draw_cross_tab :: proc(view: ^Ui_View) {
-    data, ok := &view.fractal.data.(fractal.Cross_Data)
-    if !ok {
-        return
-    }
-
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
-}
-
-draw_heart_tab :: proc(view: ^Ui_View) {
-    data, ok := &view.fractal.data.(fractal.Heart_Data)
-    if !ok {
-        return
-    }
-
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
-}
-
+@(private = "file")
 draw_julia_tab :: proc(view: ^Ui_View) {
     data, ok := &view.fractal.data.(fractal.Julia_Data)
     if !ok {
@@ -127,8 +69,9 @@ draw_julia_tab :: proc(view: ^Ui_View) {
     }
 }
 
-draw_mandelbrot_tab :: proc(view: ^Ui_View) {
-    data, ok := &view.fractal.data.(fractal.Mandelbrot_Data)
+@(private = "file")
+draw_burning_ship_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Burning_Ship_Data)
     if !ok {
         return
     }
@@ -136,17 +79,60 @@ draw_mandelbrot_tab :: proc(view: ^Ui_View) {
     im.SliderFloat("Power", &data.power, 1.5, 6.0)
 }
 
-draw_perpendicular_tab :: proc(view: ^Ui_View) {
-    data, ok := &view.fractal.data.(fractal.Perpendicular_Data)
-    if !ok {
-        return
-    }
-
-    im.SliderFloat("Power", &data.power, 1.5, 6.0)
-}
-
+@(private = "file")
 draw_tricorn_tab :: proc(view: ^Ui_View) {
     data, ok := &view.fractal.data.(fractal.Tricorn_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+
+@(private = "file")
+draw_celtic_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Celtic_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+@(private = "file")
+draw_buffalo_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Buffalo_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+@(private = "file")
+draw_cross_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Cross_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+@(private = "file")
+draw_heart_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Heart_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+@(private = "file")
+draw_perpendicular_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Perpendicular_Data)
     if !ok {
         return
     }
