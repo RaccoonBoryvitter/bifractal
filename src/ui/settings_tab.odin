@@ -4,7 +4,6 @@ import "core:fmt"
 
 import im "deps:imgui"
 
-import "../events"
 import "../settings"
 
 draw_settings_tab :: proc(view: ^Ui_View) {
@@ -66,7 +65,8 @@ draw_settings_tab :: proc(view: ^Ui_View) {
     im.Separator()
 
     if im.Button("Reset to defaults") {
-        append(&view.events.queue, events.Settings_Reset{})
+        view.settings = settings.default_settings()
+        view.settings_changed = true
     }
     im.SameLine()
     if im.Button("Save") {

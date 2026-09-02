@@ -43,14 +43,6 @@ create_app_logger :: proc() -> log.Logger {
 app_dispatch_events :: proc(state: ^App_Context) {
     for event in state.events.queue {
         switch e in event {
-        case events.View_Reset:
-            fractal.reset_fractal_view(&state.fractal.base)
-        case events.Max_Iter_Changed:
-            state.fractal.base.max_iter = clamp(
-                e.value,
-                fractal.FRACTAL_MIN_ITERATIONS,
-                fractal.FRACTAL_MAX_ITERATIONS,
-            )
         case events.Window_Resized:
             state.window.size = e.size
             state.window.pixel_scale = platform.compute_pixel_scale(
@@ -60,110 +52,6 @@ app_dispatch_events :: proc(state: ^App_Context) {
             if platform.resize_gpu_output(&state.gpu, e.size) == nil {
                 state.gpu.valid = false
             }
-        case events.Palette_Banded_Changed:
-            state.palette.banded = e.banded
-        case events.Palette_Mirrored:
-            palette.mirror_palette(&state.fractal.base.palette)
-        case events.Palette_Rotated:
-            palette.rotate_palette(&state.fractal.base.palette, e.delta)
-        case events.Palette_Randomized:
-            palette.randomize_palette(
-                &state.fractal.base.palette,
-                rand.default_random_generator(&state.palette.rand_state),
-            )
-        case events.Palette_Preset_Applied:
-            palette.apply_palette_preset(&state.fractal.base.palette, e.preset)
-        case events.Palette_Color_Changed:
-            switch e.kind {
-            case .Offset:
-                state.fractal.base.palette.offset = e.value
-            case .Amplitude:
-                state.fractal.base.palette.amplitude = e.value
-            case .Frequency:
-                state.fractal.base.palette.frequency = e.value
-            case .Phase:
-                state.fractal.base.palette.phase = e.value
-            }
-        case events.Interior_Color_Changed:
-            state.fractal.base.interior_color = {
-                e.value.r,
-                e.value.g,
-                e.value.b,
-                1.0,
-            }
-        case events.Fractal_Kind_Changed:
-            state.fractal = fractal.init_fractal_state(
-                e.value,
-                geom.Extent_2D {
-                    w = u32(state.fractal.base.resolution.x),
-                    h = u32(state.fractal.base.resolution.y),
-                },
-            )
-        case events.Mandelbrot_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Mandelbrot_Data:
-                state.fractal.data = fractal.Mandelbrot_Data {
-                    power = e.value,
-                }
-            }
-        case events.Julia_Constant_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Julia_Data:
-                state.fractal.data = fractal.Julia_Data {
-                    constant = e.value,
-                }
-            }
-        case events.Burning_Ship_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Burning_Ship_Data:
-                state.fractal.data = fractal.Burning_Ship_Data {
-                    power = e.value,
-                }
-            }
-        case events.Tricorn_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Tricorn_Data:
-                state.fractal.data = fractal.Tricorn_Data {
-                    power = e.value,
-                }
-            }
-        case events.Celtic_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Celtic_Data:
-                state.fractal.data = fractal.Celtic_Data {
-                    power = e.value,
-                }
-            }
-        case events.Buffalo_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Buffalo_Data:
-                state.fractal.data = fractal.Buffalo_Data {
-                    power = e.value,
-                }
-            }
-        case events.Cross_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Cross_Data:
-                state.fractal.data = fractal.Cross_Data {
-                    power = e.value,
-                }
-            }
-        case events.Heart_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Heart_Data:
-                state.fractal.data = fractal.Heart_Data {
-                    power = e.value,
-                }
-            }
-        case events.Perpendicular_Power_Changed:
-            #partial switch d in state.fractal.data {
-            case fractal.Perpendicular_Data:
-                state.fractal.data = fractal.Perpendicular_Data {
-                    power = e.value,
-                }
-            }
-        case events.Settings_Reset:
-            settings.reset(&state.settings)
         case events.Image_Save_Requested:
             render.request_save(&state.save)
         }

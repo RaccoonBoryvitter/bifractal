@@ -2,15 +2,18 @@ package ui
 
 import im "deps:imgui"
 
-import "../events"
 import "../fractal"
+import "../geom"
 
 draw_fractal_tab :: proc(view: ^Ui_View) {
     fractal_kind := view.fractal.kind
     if draw_enum_slider("Fractal", &fractal_kind) {
-        append(
-            &view.events.queue,
-            events.Fractal_Kind_Changed{value = fractal_kind},
+        view.fractal^ = fractal.init_fractal_state(
+            fractal_kind,
+            geom.Extent_2D {
+                w = u32(view.fractal.base.resolution.x),
+                h = u32(view.fractal.base.resolution.y),
+            },
         )
     }
 
@@ -21,7 +24,11 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
         fractal.FRACTAL_MIN_ITERATIONS,
         fractal.FRACTAL_MAX_ITERATIONS,
     ) {
-        append(&view.events.queue, events.Max_Iter_Changed{value = max_iter})
+        view.fractal.base.max_iter = clamp(
+            max_iter,
+            fractal.FRACTAL_MIN_ITERATIONS,
+            fractal.FRACTAL_MAX_ITERATIONS,
+        )
     }
 
     im.Separator()
@@ -61,4 +68,88 @@ draw_fractal_tab :: proc(view: ^Ui_View) {
     if fractal_kind == .Perpendicular {
         draw_perpendicular_tab(view)
     }
+}
+
+draw_buffalo_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Buffalo_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+draw_burning_ship_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Burning_Ship_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+draw_celtic_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Celtic_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+draw_cross_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Cross_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+draw_heart_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Heart_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+draw_julia_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Julia_Data)
+    if !ok {
+        return
+    }
+
+    constant_parts := transmute([2]f32)data.constant
+    if im.SliderFloat2("Constant", &constant_parts, -1.5, 1.5) {
+        data.constant = transmute(complex64)constant_parts
+    }
+}
+
+draw_mandelbrot_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Mandelbrot_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+draw_perpendicular_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Perpendicular_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
+}
+
+draw_tricorn_tab :: proc(view: ^Ui_View) {
+    data, ok := &view.fractal.data.(fractal.Tricorn_Data)
+    if !ok {
+        return
+    }
+
+    im.SliderFloat("Power", &data.power, 1.5, 6.0)
 }

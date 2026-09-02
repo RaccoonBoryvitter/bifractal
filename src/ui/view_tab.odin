@@ -5,6 +5,7 @@ import "core:fmt"
 import im "deps:imgui"
 
 import "../events"
+import "../fractal"
 
 draw_view_tab :: proc(view: ^Ui_View) {
     im.Text(
@@ -38,7 +39,7 @@ draw_view_tab :: proc(view: ^Ui_View) {
     im.Spacing()
 
     if im.Button("Reset View") {
-        append(&view.events.queue, events.View_Reset{})
+        fractal.reset_fractal_view(&view.fractal.base)
     }
     im.SameLine()
     if im.Button("Save Image (Ctrl+S)") {

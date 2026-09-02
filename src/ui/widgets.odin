@@ -7,7 +7,8 @@ import "core:reflect"
 
 import im "deps:imgui"
 
-import "../events"
+import "core:math/rand"
+
 import "../fractal"
 import "../palette"
 
@@ -247,10 +248,12 @@ draw_palette_params_slider :: proc(
 draw_palette_tab :: proc(view: ^Ui_View) {
     interior_color := view.fractal.base.interior_color.rgb
     if im.ColorEdit3("Interior", &interior_color) {
-        append(
-            &view.events.queue,
-            events.Interior_Color_Changed{value = interior_color},
-        )
+        view.fractal.base.interior_color = {
+            interior_color.r,
+            interior_color.g,
+            interior_color.b,
+            1.0,
+        }
     }
 
     new_channel := draw_channels_radio_buttons(view.ui_state.selected_channel)
@@ -264,10 +267,7 @@ draw_palette_tab :: proc(view: ^Ui_View) {
         &offset,
         view.ui_state.selected_channel,
     ) {
-        append(
-            &view.events.queue,
-            events.Palette_Color_Changed{kind = .Offset, value = offset},
-        )
+        view.fractal.base.palette.offset = offset
     }
 
     amplitude := view.fractal.base.palette.amplitude
@@ -276,10 +276,7 @@ draw_palette_tab :: proc(view: ^Ui_View) {
         &amplitude,
         view.ui_state.selected_channel,
     ) {
-        append(
-            &view.events.queue,
-            events.Palette_Color_Changed{kind = .Amplitude, value = amplitude},
-        )
+        view.fractal.base.palette.amplitude = amplitude
     }
 
     frequency := view.fractal.base.palette.frequency
@@ -288,10 +285,7 @@ draw_palette_tab :: proc(view: ^Ui_View) {
         &frequency,
         view.ui_state.selected_channel,
     ) {
-        append(
-            &view.events.queue,
-            events.Palette_Color_Changed{kind = .Frequency, value = frequency},
-        )
+        view.fractal.base.palette.frequency = frequency
     }
 
     phase := view.fractal.base.palette.phase
@@ -300,10 +294,7 @@ draw_palette_tab :: proc(view: ^Ui_View) {
         &phase,
         view.ui_state.selected_channel,
     ) {
-        append(
-            &view.events.queue,
-            events.Palette_Color_Changed{kind = .Phase, value = phase},
-        )
+        view.fractal.base.palette.phase = phase
     }
 
     draw_list := im.GetWindowDrawList()
@@ -317,10 +308,7 @@ draw_palette_tab :: proc(view: ^Ui_View) {
 
     banded := view.palette_state.banded
     if im.Checkbox("Banded", &banded) {
-        append(
-            &view.events.queue,
-            events.Palette_Banded_Changed{banded = banded},
-        )
+        view.palette_state.banded = banded
     }
 
     pos := im.GetCursorScreenPos()
@@ -337,28 +325,31 @@ draw_palette_tab :: proc(view: ^Ui_View) {
             view.fractal.base.palette,
         )
     }
-     else {
+    else {
         draw_gradient_swatch(draw_list, pos, size, view.fractal.base.palette)
     }
 
     if im.Button("Mirror") {
-        append(&view.events.queue, events.Palette_Mirrored{})
+        palette.mirror_palette(&view.fractal.base.palette)
     }
     im.SameLine()
     if im.Button("Randomize") {
-        append(&view.events.queue, events.Palette_Randomized{})
+        palette.randomize_palette(
+            &view.fractal.base.palette,
+            rand.default_random_generator(&view.palette_state.rand_state),
+        )
     }
     im.SameLine()
     if im.Button("Rotate") {
-        append(&view.events.queue, events.Palette_Rotated{delta = 0.05})
+        palette.rotate_palette(&view.fractal.base.palette, 0.05)
     }
 
     if im.CollapsingHeader("Presets", {}) {
         for preset in palette.PALETTE_PRESETS {
             if im.Button(fmt.ctprintf(preset.name)) {
-                append(
-                    &view.events.queue,
-                    events.Palette_Preset_Applied{preset = preset},
+                palette.apply_palette_preset(
+                    &view.fractal.base.palette,
+                    preset,
                 )
             }
             im.SameLine()
