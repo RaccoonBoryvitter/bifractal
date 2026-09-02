@@ -109,6 +109,12 @@ resize_gpu_output :: proc(
     new_size: geom.Extent_2D,
 ) -> ^sdl.GPUTexture {
     if ctx.output != nil && ctx.device != nil {
+        if !sdl.WaitForGPUIdle(ctx.device) {
+            log.warnf(
+                "WaitForGPUIdle failed before resize: %s",
+                sdl.GetError(),
+            )
+        }
         sdl.ReleaseGPUTexture(ctx.device, ctx.output)
     }
 

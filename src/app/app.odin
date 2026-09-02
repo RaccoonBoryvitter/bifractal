@@ -41,21 +41,32 @@ create_app_logger :: proc() -> log.Logger {
 }
 
 app_dispatch_events :: proc(state: ^App_Context) {
+    last_resize: Maybe(geom.Extent_2D)
+    save_requested := false
+
     for event in state.events.queue {
         switch e in event {
         case events.Window_Resized:
-            state.window.size = e.size
-            state.window.pixel_scale = platform.compute_pixel_scale(
-                state.window.handle,
-            )
-            state.fractal.base.resolution = {f32(e.size.w), f32(e.size.h)}
-            if platform.resize_gpu_output(&state.gpu, e.size) == nil {
-                state.gpu.valid = false
-            }
+            last_resize = e.size
         case events.Image_Save_Requested:
-            render.request_save(&state.save)
+            save_requested = true
         }
     }
+
+    if size, ok := last_resize.?; ok {
+        state.window.size = size
+        state.window.pixel_scale = platform.compute_pixel_scale(
+            state.window.handle,
+        )
+        state.fractal.base.resolution = {f32(size.w), f32(size.h)}
+        if platform.resize_gpu_output(&state.gpu, size) == nil {
+            state.gpu.valid = false
+        }
+    }
+    if save_requested {
+        render.request_save(&state.save)
+    }
+
     clear(&state.events.queue)
 }
 
