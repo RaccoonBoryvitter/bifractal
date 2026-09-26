@@ -1,7 +1,5 @@
 package fractal
 
-import "core:math"
-
 import sdl "vendor:sdl3"
 
 import "../geom"
@@ -13,6 +11,9 @@ view_screen_to_complex :: proc(
 ) -> complex128 {
     w := f64(size.w)
     h := f64(size.h)
+    if h == 0 {
+        return complex(view.center.x, view.center.y)
+    }
     sx := f64(screen.x)
     sy := f64(screen.y)
     return complex(
@@ -40,7 +41,6 @@ get_window_pixel_scale :: proc(window: ^sdl.Window) -> geom.Vec2 {
 
 reset_fractal_view :: proc(base: ^Fractal_Base) {
     base.camera.view.zoom = FRACTAL_DEFAULT_ZOOM
-    base.zoom_level = math.log2(base.camera.view.zoom)
     base.camera.view.center = {
         FRACTAL_DEFAULT_CENTER_X,
         FRACTAL_DEFAULT_CENTER_Y,

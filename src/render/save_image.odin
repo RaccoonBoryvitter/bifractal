@@ -94,7 +94,7 @@ readback_output :: proc(
     data: []f32,
     ok: bool,
 ) {
-    bytes_size := u32(size.w * size.h * 4 * size_of(f32))
+    bytes_size := u32(size.w * size.h * 4 * size_of(u16))
 
     transfer_buf := sdl.CreateGPUTransferBuffer(
         gpu.device,
@@ -152,10 +152,41 @@ readback_output :: proc(
     }
     defer sdl.UnmapGPUTransferBuffer(gpu.device, transfer_buf)
 
-    src := ([^]f32)(mapped)[:size.w * size.h * 4]
+    src := ([^]u16)(mapped)[:size.w * size.h * 4]
     out := make([]f32, len(src))
-    copy(out, src)
+    for v, i in src {
+        out[i] = half_to_float(v)
+    }
     return out, true
+}
+
+@(private = "file")
+half_to_float :: proc(h: u16) -> f32 {
+    sign := f32((h >> 15) & 0x1)
+    exp := i32((h >> 10) & 0x1F)
+    mant := u32(h & 0x3FF)
+
+    f: u32
+    switch exp {
+    case 0:
+        if mant == 0 {
+            f = u32(sign) << 31
+        }
+        else {
+            e := i32(-14)
+            for (mant & 0x400) == 0 {
+                mant <<= 1
+                e -= 1
+            }
+            mant &= 0x3FF
+            f = (u32(sign) << 31) | (u32(e + 127) << 23) | (mant << 13)
+        }
+    case 31:
+        f = (u32(sign) << 31) | (0xFF << 23) | (mant << 13)
+    case:
+        f = (u32(sign) << 31) | (u32(exp - 15 + 127) << 23) | (mant << 13)
+    }
+    return transmute(f32)f
 }
 
 @(private = "file")

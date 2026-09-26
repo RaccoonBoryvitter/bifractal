@@ -48,8 +48,15 @@ render_context_end :: proc(ctx: ^Render_Context) {
     mem.arena_free_all(&ctx.scratch)
 }
 
-render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
+render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) -> bool {
     ctx.pass = .Compute
+    defer ctx.pass = .None
+
+    pipeline, has_pipeline := view.gpu.pipelines[view.kind]
+    if !has_pipeline || pipeline == nil {
+        log.warnf("missing compute pipeline for fractal kind")
+        return false
+    }
 
     storage_texture_bindings := [1]sdl.GPUStorageTextureReadWriteBinding {
         {texture = view.gpu.output, cycle = true},
@@ -61,7 +68,7 @@ render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
         nil,
         0,
     )
-    sdl.BindGPUComputePipeline(compute_pass, view.gpu.pipelines[view.kind])
+    sdl.BindGPUComputePipeline(compute_pass, pipeline)
 
     uniform_size := fractal.fractal_uniform_size(view.fractal)
     uniform: rawptr
@@ -69,8 +76,7 @@ render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
         v, alloc_err := mem.arena_alloc(&ctx.scratch, uniform_size)
         if alloc_err != .None {
             sdl.EndGPUComputePass(compute_pass)
-            ctx.pass = .None
-            return
+            return false
         }
         uniform = v
     }
@@ -81,8 +87,7 @@ render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
 
     if !fractal.fractal_make_uniform(view.fractal, uniform) {
         sdl.EndGPUComputePass(compute_pass)
-        ctx.pass = .None
-        return
+        return false
     }
 
     sdl.PushGPUComputeUniformData(ctx.cmd, 0, uniform, u32(uniform_size))
@@ -94,7 +99,7 @@ render_compute_pass :: proc(view: ^Render_View, ctx: ^Render_Context) {
     )
     sdl.EndGPUComputePass(compute_pass)
 
-    ctx.pass = .None
+    return true
 }
 
 render_acquire_swapchain :: proc(
@@ -162,6 +167,24 @@ render_blit_pass :: proc(
     ctx.pass = .None
 }
 
+render_clear_pass :: proc(
+    ctx: ^Render_Context,
+    swapchain_texture: ^sdl.GPUTexture,
+) {
+    ctx.pass = .Blit
+
+    target_info := sdl.GPUColorTargetInfo {
+        texture     = swapchain_texture,
+        load_op     = .CLEAR,
+        store_op    = .STORE,
+        clear_color = {0, 0, 0, 1},
+    }
+    render_pass := sdl.BeginGPURenderPass(ctx.cmd, &target_info, 1, nil)
+    sdl.EndGPURenderPass(render_pass)
+
+    ctx.pass = .None
+}
+
 render_ui_pass :: proc(
     view: ^Render_View,
     ctx: ^Render_Context,
@@ -192,13 +215,16 @@ render_ui_pass :: proc(
 }
 
 render_present_frame :: proc(view: ^Render_View) -> sdl.AppResult {
-    if !view.gpu.valid {
-        return .FAILURE
+    if !view.gpu.valid || view.gpu.output == nil {
+        return .CONTINUE
+    }
+    if view.window_size.w == 0 || view.window_size.h == 0 {
+        return .CONTINUE
     }
 
     ctx, ok := render_context_begin(view)
     if !ok {
-        return .FAILURE
+        return .CONTINUE
     }
     defer render_context_end(&ctx)
 
@@ -207,15 +233,18 @@ render_present_frame :: proc(view: ^Render_View) -> sdl.AppResult {
         &ctx,
     )
     if !acquire_ok {
-        return .FAILURE
+        return .CONTINUE
     }
     if swapchain_texture == nil {
         return .CONTINUE
     }
 
-    render_compute_pass(view, &ctx)
-
-    render_blit_pass(view, &ctx, swapchain_texture, width, height)
+    if render_compute_pass(view, &ctx) {
+        render_blit_pass(view, &ctx, swapchain_texture, width, height)
+    }
+    else {
+        render_clear_pass(&ctx, swapchain_texture)
+    }
 
     render_ui_pass(view, &ctx, swapchain_texture)
 

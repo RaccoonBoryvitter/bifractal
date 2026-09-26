@@ -97,13 +97,14 @@ fractal_apply_command :: proc(
             fractal.base.camera.view,
         )
 
-        fractal.base.zoom_level +=
-            input.delta.y * FRACTAL_ZOOM_SCROLL_FACTOR
-        fractal.base.zoom_level = max(
-            fractal.base.zoom_level,
-            FRACTAL_MIN_ZOOM_LOG,
+        new_zoom :=
+            fractal.base.camera.view.zoom *
+            math.exp(input.delta.y * FRACTAL_ZOOM_FACTOR)
+        fractal.base.camera.view.zoom = clamp(
+            new_zoom,
+            FRACTAL_MIN_ZOOM,
+            FRACTAL_MAX_ZOOM,
         )
-        fractal.base.camera.view.zoom = math.exp(fractal.base.zoom_level)
 
         new_mouse_complex := view_screen_to_complex(
             input.pos,
@@ -126,7 +127,7 @@ fractal_apply_command :: proc(
             fractal.base.max_iter = FRACTAL_MAX_ITERATIONS
         }
     case .Decrease_Iter:
-        fractal.base.max_iter -= FRACTAL_ITERATION_DECREASE_STEP
+        fractal.base.max_iter -= FRACTAL_ITERATION_STEP
         if fractal.base.max_iter < FRACTAL_MIN_ITERATIONS {
             fractal.base.max_iter = FRACTAL_MIN_ITERATIONS
         }

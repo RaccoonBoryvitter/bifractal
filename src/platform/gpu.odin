@@ -140,7 +140,7 @@ create_output_texture :: proc(
         device,
         sdl.GPUTextureCreateInfo {
             type = .D2,
-            format = .R32G32B32A32_FLOAT,
+            format = .R16G16B16A16_FLOAT,
             width = resolution.w,
             height = resolution.h,
             layer_count_or_depth = 1,

@@ -13,10 +13,8 @@ Julia_Params :: struct {
 }
 
 Julia_Uniform :: struct {
-    center_hi:    [2]f32,
-    center_lo:    [2]f32,
+    center:       [2]f32,
     zoom:         f32,
-    _header_pad:  [2]f32,
     using params: Julia_Params,
 }
 
@@ -31,11 +29,8 @@ julia_make_uniform :: proc(
     ok: bool,
 ) {
     cx := base.camera.view.center
-    hi := [2]f32{f32(cx.x), f32(cx.y)}
-    lo := [2]f32{f32(cx.x - f64(hi.x)), f32(cx.y - f64(hi.y))}
     uniform := Julia_Uniform {
-        center_hi = hi,
-        center_lo = lo,
+        center = {f32(cx.x), f32(cx.y)},
         zoom = f32(base.camera.view.zoom),
         params = Julia_Params {
             max_iter = base.max_iter,
